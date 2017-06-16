@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 RUN apt-get update && \
-    apt-get install -y wget build-essential make perl && \
+    apt-get install -y wget build-essential make perl hmmer && \
     cd /root/ && \
     wget "http://ftp.ebi.ac.uk/pub/databases/Pfam/Tools/PfamScan.tar.gz" -O- \
     | tar --no-same-owner -xz && \
