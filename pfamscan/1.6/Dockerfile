@@ -4,8 +4,8 @@ RUN apt-get update && \
     cd /root/ && \
     wget "http://ftp.ebi.ac.uk/pub/databases/Pfam/Tools/PfamScan.tar.gz" -O- \
     | tar --no-same-owner -xz && \
-    cpan install Moose  && \
-    cpan install IPC::Run && \
+    cpan -fi Moose  && \
+    cpan -fi IPC::Run && \
     cd  PfamScan/ && \
     mv Bio/ /usr/share/perl/5.22/ && \
     mv pfam_scan.pl /usr/local/bin/ && \
