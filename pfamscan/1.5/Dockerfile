@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 RUN apt-get update && \
     apt-get install -y wget build-essential make perl hmmer && \
     cd /root/ && \
-    wget "ftp://ftp.ebi.ac.uk/pub/databases/Pfam/Tools/OldPfamScan/PfamScan1.5/PfamScan.tar.gz" -O- \
+    wget "http://ftp.ebi.ac.uk/pub/databases/Pfam/Tools/OldPfamScan/PfamScan1.5/PfamScan.tar.gz" -O- \
     | tar --no-same-owner -xz && \
     cpan -fi Moose  && \
     cpan -fi IPC::Run && \
