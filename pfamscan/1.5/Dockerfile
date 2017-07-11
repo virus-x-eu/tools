@@ -6,6 +6,7 @@ RUN apt-get update && \
     | tar --no-same-owner -xz && \
     cpan -fi Moose  && \
     cpan -fi IPC::Run && \
+    cpan -fi Bio::SeqFeature::Generic && \
     cd  PfamScan/ && \
     mv Bio/ /usr/share/perl/5.22/ && \
     mv pfam_scan.pl /usr/local/bin/ && \
