@@ -5,7 +5,6 @@
 # https://www.apache.org/licenses/LICENSE-2.0
 
 from Bio import SeqIO
-from Bio.SeqIO import FastaIO
 import argparse
 import json
 
