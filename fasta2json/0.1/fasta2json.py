@@ -9,7 +9,7 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(description='''
-Convert fasta to json
+Convert fasta to Elasticsearch json
 ''')
 parser.add_argument("--fasta", dest='input_fasta', required=True, help='fasta input file')
 parser.add_argument("--json", dest='output_json', required=True, help='json output file')
@@ -18,6 +18,9 @@ args = parser.parse_args()
 with open(args.input_fasta, 'rU') as sourceFile:
     with open(args.output_json, 'w') as destFile:
         for record in SeqIO.parse(sourceFile, "fasta"):
+            header = {"index": {"_id": str(record.id)}}
             obj = {"id": str(record.id), "nucleotide": str(record.seq), "length": len(str(record.seq))}
+            destFile.write(json.dumps(header))
+            destFile.write('\n')
             destFile.write(json.dumps(obj))
             destFile.write('\n')
