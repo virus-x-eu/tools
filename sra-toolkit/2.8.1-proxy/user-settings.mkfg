@@ -1,0 +1,2 @@
+/http/proxy/enabled = "true"
+/http/proxy/path = "proxy.cebitec.uni-bielefeld.de:3128"
