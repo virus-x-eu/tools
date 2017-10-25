@@ -1,5 +1,5 @@
 FROM ubuntu:16.04
-COPY regenerate_ids.py update_ids.py /usr/local/bin/
+COPY fastafilterlength.py /usr/local/bin/
 RUN apt-get update && \
     apt-get install -y python-biopython && \
     chmod +x /usr/local/bin/fastafilterlength.py && \
