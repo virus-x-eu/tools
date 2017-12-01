@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 ENV VIRSORTER_VERSION=1bc4cc2e4
 RUN apt-get update && \
-    apt-get install -y hmmer mcl muscle blast2 wget git perl cpanminus build-essential libdb-dev && \
+    apt-get install -y hmmer mcl muscle ncbi-blast+ wget git perl cpanminus build-essential libdb-dev && \
     wget "http://metagene.nig.ac.jp/metagene/mga_x86_64.tar.gz" -qO- | tar xz -C /tmp/ && \
     mv /tmp/mga_linux_ia64 /usr/local/bin/ && \
     cpanm --force Capture::Tiny && \
