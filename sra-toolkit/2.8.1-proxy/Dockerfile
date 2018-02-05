@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:rolling
 RUN mkdir /root/.ncbi/
 ADD user-settings.mkfg /root/.ncbi/
 RUN apt-get update && \
