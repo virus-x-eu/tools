@@ -1,4 +1,4 @@
-FROM ubuntu:zesty
+FROM ubuntu:latest
 COPY ena-fastq-download.py /usr/local/bin/
 RUN apt-get update && \
     apt-get install -y python3-pip wget sra-toolkit && \
