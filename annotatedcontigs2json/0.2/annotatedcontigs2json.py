@@ -42,17 +42,25 @@ def parse_bam_for_ids(chunk, sample_name, bam_path):
     ref_id = ref.split(" ")[0]
     if ref_id not in coverage_map:
       coverage_map[ref_id] = {}
-    cov_vals = [p.n for p in sam_tmp.pileup(str(ref))]
-    if len(cov_vals) < coverage_avg_span:
-      coverage_map[ref_id][sample_name] = []
-    else:
-      coverage_map[ref_id][sample_name] = numpy.convolve(cov_vals,
-                                                  numpy.ones(int(coverage_avg_span / 2), ) / int(
-                                                    coverage_avg_span / 2),
-                                                  mode='same')[
-                                   int(coverage_avg_span / 2) - 1:int(
-                                     -coverage_avg_span / 2):coverage_avg_span].astype(int).tolist()
+    try:
+      cov_vals = [p.n for p in sam_tmp.pileup(str(ref))]
+      if len(cov_vals) < coverage_avg_span:
+        coverage_map[ref_id][sample_name] = []
+      else:
+        coverage_map[ref_id][sample_name] = numpy.convolve(cov_vals,
+                                                           numpy.ones(int(coverage_avg_span / 2), ) / int(
+                                                             coverage_avg_span / 2),
+                                                           mode='same')[
+                                            int(coverage_avg_span / 2) - 1:int(
+                                              -coverage_avg_span / 2):coverage_avg_span].astype(int).tolist()
+    except ValueError:
+      print('ERROR: Cannot find index file %s.bai' % bam_path)
+      return 1
+    except:
+      print('ERROR: Unknown error in thread.')
+      return 1
   print('Chunk done')
+  return 0
 
 
 if args.names and args.bams:
@@ -68,7 +76,9 @@ if args.names and args.bams:
     print('Using %s threads' % threads)
     with ThreadPoolExecutor(max_workers=threads) as executor:
       futures = [executor.submit(parse_bam_for_ids, chunk, name, bam) for chunk in chunks]
-      as_completed(futures)
+      for future in as_completed(futures):
+        if future.result() != 0:
+          exit(1)
 
 with open(args.input_fasta, 'rU') as sourceFile, open(args.input_virsorter, 'r') as virsorterFile:
   phage_confidence = ''
