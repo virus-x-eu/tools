@@ -58,17 +58,17 @@ def parse_bam_for_ids(chunk, bam_path):
 if args.names and args.bams:
   named_bams = zip(args.names, args.bams)
 
-for name, bam in named_bams:
-  print("For sample name '%s' parsing BAM file: %s" % (name, bam))
-  sam = pysam.AlignmentFile(bam, "rb")
-  total_ref_count = len(sam.references)
-  print('File has %s refs' % total_ref_count)
-  chunk_size = ceil(total_ref_count / threads)
-  chunks = [sam.references[i:i + chunk_size] for i in range(0, len(sam.references), chunk_size)]
-  print('Using %s threads' % threads)
-  with ThreadPoolExecutor(max_workers=threads) as executor:
-    futures = [executor.submit(parse_bam_for_ids, chunk, bam) for chunk in chunks]
-    as_completed(futures)
+  for name, bam in named_bams:
+    print("For sample name '%s' parsing BAM file: %s" % (name, bam))
+    sam = pysam.AlignmentFile(bam, "rb")
+    total_ref_count = len(sam.references)
+    print('File has %s refs' % total_ref_count)
+    chunk_size = ceil(total_ref_count / threads)
+    chunks = [sam.references[i:i + chunk_size] for i in range(0, len(sam.references), chunk_size)]
+    print('Using %s threads' % threads)
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+      futures = [executor.submit(parse_bam_for_ids, chunk, bam) for chunk in chunks]
+      as_completed(futures)
 
 with open(args.input_fasta, 'rU') as sourceFile, open(args.input_virsorter, 'r') as virsorterFile:
   phage_confidence = ''
