@@ -42,11 +42,11 @@ def parse_bam_for_ids(chunk, bam_path):
     ref_id = ref.split(" ")[0]
     if ref_id not in coverage_map:
       coverage_map[ref_id] = {}
-      cov_vals = [p.n for p in sam_tmp.pileup(str(ref))]
-      if len(cov_vals) < coverage_avg_span:
-        coverage_map[ref_id][name] = []
-      else:
-        coverage_map[ref_id][name] = numpy.convolve(cov_vals,
+    cov_vals = [p.n for p in sam_tmp.pileup(str(ref))]
+    if len(cov_vals) < coverage_avg_span:
+      coverage_map[ref_id][name] = []
+    else:
+      coverage_map[ref_id][name] = numpy.convolve(cov_vals,
                                                     numpy.ones(int(coverage_avg_span / 2), ) / int(
                                                       coverage_avg_span / 2),
                                                     mode='same')[
@@ -111,7 +111,7 @@ with open(args.input_fasta, 'rU') as sourceFile, open(args.input_virsorter, 'r')
         "nucleotide": str(record.seq),
         "length": len(str(record.seq))
       }
-      if args.names and args.bams:
+      if args.names and args.bams and str(record.id) in coverage_map:
         obj['coverage'] = [{'name': k, 'values': v} for k, v in coverage_map[str(record.id)].items()]
       if id in contigid_to_virsorter_phage or id in contigid_to_virsorter_prophage:
         obj["virsorter"] = {}
