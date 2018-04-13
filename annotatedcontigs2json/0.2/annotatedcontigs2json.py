@@ -22,7 +22,7 @@ parser.add_argument('--sample-names', nargs='*', dest='names')
 parser.add_argument('--sample-bam-files', nargs='*', dest='bams')
 parser.add_argument("--json", dest='output_json', required=True, help='json output file')
 parser.add_argument("--threads", type=int, dest='threads', help='number parallel threads for BAM file reader',
-                    default=multiprocessing.cpu_count())
+                    default=min(multiprocessing.cpu_count(), 6))
 args = parser.parse_args()
 
 threads = args.threads
@@ -35,23 +35,23 @@ contigid_to_virsorter_prophage = {}
 coverage_map = {}
 
 
-def parse_bam_for_ids(chunk, bam_path):
+def parse_bam_for_ids(chunk, sample_name, bam_path):
   print('Parsing chunk of size %s' % len(chunk))
-  sam_tmp = pysam.AlignmentFile(bam, "rb")
+  sam_tmp = pysam.AlignmentFile(bam_path, "rb")
   for ref in chunk:
     ref_id = ref.split(" ")[0]
     if ref_id not in coverage_map:
       coverage_map[ref_id] = {}
     cov_vals = [p.n for p in sam_tmp.pileup(str(ref))]
     if len(cov_vals) < coverage_avg_span:
-      coverage_map[ref_id][name] = []
+      coverage_map[ref_id][sample_name] = []
     else:
-      coverage_map[ref_id][name] = numpy.convolve(cov_vals,
-                                                    numpy.ones(int(coverage_avg_span / 2), ) / int(
-                                                      coverage_avg_span / 2),
-                                                    mode='same')[
-                                     int(coverage_avg_span / 2) - 1:int(
-                                       -coverage_avg_span / 2):coverage_avg_span].astype(int).tolist()
+      coverage_map[ref_id][sample_name] = numpy.convolve(cov_vals,
+                                                  numpy.ones(int(coverage_avg_span / 2), ) / int(
+                                                    coverage_avg_span / 2),
+                                                  mode='same')[
+                                   int(coverage_avg_span / 2) - 1:int(
+                                     -coverage_avg_span / 2):coverage_avg_span].astype(int).tolist()
   print('Chunk done')
 
 
@@ -67,7 +67,7 @@ if args.names and args.bams:
     chunks = [sam.references[i:i + chunk_size] for i in range(0, len(sam.references), chunk_size)]
     print('Using %s threads' % threads)
     with ThreadPoolExecutor(max_workers=threads) as executor:
-      futures = [executor.submit(parse_bam_for_ids, chunk, bam) for chunk in chunks]
+      futures = [executor.submit(parse_bam_for_ids, chunk, name, bam) for chunk in chunks]
       as_completed(futures)
 
 with open(args.input_fasta, 'rU') as sourceFile, open(args.input_virsorter, 'r') as virsorterFile:
