@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # (c) Christian Henke
 # Licensed under Apache License 2.0
