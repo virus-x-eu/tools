@@ -10,11 +10,10 @@ import json
 import pysam
 import numpy
 from math import ceil
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import multiprocessing
+from multiprocessing import Pool, cpu_count
 
 parser = argparse.ArgumentParser(description='''
-Convert fasta to Elasticsearch json while including contig based annotation information
+Convert fasta to Elasticsearch json while including contig based annotation information and coverage
 ''')
 parser.add_argument("--fasta", dest='input_fasta', required=True, help='fasta input file')
 parser.add_argument("--virsorter-csv", dest='input_virsorter', required=True, help='VirSorter input file')
@@ -22,12 +21,13 @@ parser.add_argument('--sample-names', nargs='*', dest='names')
 parser.add_argument('--sample-bam-files', nargs='*', dest='bams')
 parser.add_argument("--json", dest='output_json', required=True, help='json output file')
 parser.add_argument("--threads", type=int, dest='threads', help='number parallel threads for BAM file reader',
-                    default=min(multiprocessing.cpu_count(), 6))
+                    default=cpu_count())
 args = parser.parse_args()
 
 threads = args.threads
 
 coverage_avg_span = 10
+ones_val = int(coverage_avg_span / 2)
 
 contigid_to_virsorter_phage = {}
 contigid_to_virsorter_prophage = {}
@@ -37,30 +37,36 @@ coverage_map = {}
 
 def parse_bam_for_ids(chunk, sample_name, bam_path):
   print('Parsing chunk of size %s' % len(chunk))
+  coverage_map_chunk = {}
   sam_tmp = pysam.AlignmentFile(bam_path, "rb")
   for ref in chunk:
-    ref_id = ref.split(" ")[0]
-    if ref_id not in coverage_map:
-      coverage_map[ref_id] = {}
+    ref_id = ref.split(' ', 1)[0]
+    if ref_id not in coverage_map_chunk:
+      coverage_map_chunk[ref_id] = {}
     try:
-      cov_vals = [p.n for p in sam_tmp.pileup(str(ref))]
+      cov_vals = [p.n for p in sam_tmp.pileup(ref)]
       if len(cov_vals) < coverage_avg_span:
-        coverage_map[ref_id][sample_name] = []
+        coverage_map_chunk[ref_id][sample_name] = []
       else:
-        coverage_map[ref_id][sample_name] = numpy.convolve(cov_vals,
-                                                           numpy.ones(int(coverage_avg_span / 2), ) / int(
-                                                             coverage_avg_span / 2),
-                                                           mode='same')[
-                                            int(coverage_avg_span / 2) - 1:int(
-                                              -coverage_avg_span / 2):coverage_avg_span].astype(int).tolist()
+        coverage_map_chunk[ref_id][sample_name] = numpy.convolve(cov_vals, numpy.ones(ones_val, ) / ones_val,
+                                                                 mode='same')[
+                                                  ones_val - 1:-ones_val:coverage_avg_span].astype(int).tolist()
     except ValueError:
       print('ERROR: Cannot find index file %s.bai' % bam_path)
-      return 1
+      return False
     except:
       print('ERROR: Unknown error in thread.')
-      return 1
+      return False
   print('Chunk done')
-  return 0
+  return coverage_map_chunk
+
+
+def merge_with_global_coverage_map(map_chunk):
+  for ref_id, ref_obj in map_chunk.items():
+    if ref_id in coverage_map:
+      coverage_map[ref_id].update(ref_obj)
+    else:
+      coverage_map[ref_id] = ref_obj
 
 
 if args.names and args.bams:
@@ -74,10 +80,14 @@ if args.names and args.bams:
     chunk_size = ceil(total_ref_count / threads)
     chunks = [sam.references[i:i + chunk_size] for i in range(0, len(sam.references), chunk_size)]
     print('Using %s threads' % threads)
-    with ThreadPoolExecutor(max_workers=threads) as executor:
-      futures = [executor.submit(parse_bam_for_ids, chunk, name, bam) for chunk in chunks]
-      for future in as_completed(futures):
-        if future.result() != 0:
+    # real processes are used instead of threads to get around the CPython Global Interpreter Lock
+    with Pool(processes=threads) as pool:
+      results = [pool.apply_async(parse_bam_for_ids, args=(chunk, name, bam)) for chunk in chunks]
+      for result in results:
+        proc_result = result.get()
+        if proc_result:
+          merge_with_global_coverage_map(proc_result)
+        else:
           exit(1)
 
 with open(args.input_fasta, 'rU') as sourceFile, open(args.input_virsorter, 'r') as virsorterFile:
