@@ -22,6 +22,7 @@ parser.add_argument('--sample-bam-files', nargs='*', dest='bams')
 parser.add_argument("--json", dest='output_json', required=True, help='json output file')
 parser.add_argument("--threads", type=int, dest='threads', help='number parallel threads for BAM file reader',
                     default=cpu_count())
+parser.add_argument("--skip-coverage", dest='skip_coverage', action='store_true', help='Skip coverage calculation')
 args = parser.parse_args()
 
 threads = args.threads
@@ -69,7 +70,7 @@ def merge_with_global_coverage_map(map_chunk):
       coverage_map[ref_id] = ref_obj
 
 
-if args.names and args.bams:
+if (not args.skip_coverage) and args.names and args.bams:
   named_bams = zip(args.names, args.bams)
 
   for name, bam in named_bams:
@@ -131,7 +132,7 @@ with open(args.input_fasta, 'rU') as sourceFile, open(args.input_virsorter, 'r')
         "nucleotide": str(record.seq),
         "length": len(str(record.seq))
       }
-      if args.names and args.bams and str(record.id) in coverage_map:
+      if (not args.skip_coverage) and args.names and args.bams and str(record.id) in coverage_map:
         obj['coverage'] = [{'name': k, 'values': v} for k, v in coverage_map[str(record.id)].items()]
       if id in contigid_to_virsorter_phage or id in contigid_to_virsorter_prophage:
         obj["virsorter"] = {}
