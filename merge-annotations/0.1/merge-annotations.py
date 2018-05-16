@@ -18,11 +18,14 @@ PDB_IDMAP_URL = 'ftp://ftp.wwpdb.org/pub/pdb/derived_data/index/compound.idx'
 parser = argparse.ArgumentParser(description='Merge annotations.')
 parser.add_argument('dataset_file', metavar='DATASET_FILE', help='.genes.json.gz input file')
 parser.add_argument('--3dm-dir', dest='tdm_dir', required=True)
-parser.add_argument('--3dm-annotation', dest='tdm_annotation', required=True)
+parser.add_argument('--3dm-annotation', dest='tdm_annotation', required=True,
+                    help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--pfam-idmap', required=True, help='Download from: %s' % PFAM_IDMAP_URL)
-# parser.add_argument('--pfam-annotation', required=True)
+# parser.add_argument('--pfam-annotation', required=True,
+#                     help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--pdb-idmap', required=True, help='Download from: %s' % PDB_IDMAP_URL)
-parser.add_argument('--pdb-annotation', required=True)
+parser.add_argument('--pdb-annotation', required=True,
+                    help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('out_file', metavar='OUT_FILE', help='.genes.json.gz output file')
 args = parser.parse_args()
 
@@ -43,7 +46,7 @@ def read_tdm_files():
       # cat names | sed 's/_virusx_2016//' | sed 's/fam/f/'  | sed 's/sub/s/'
       tdm_id = filename.replace('.json', '').replace('_virusx_2016', '').replace('fam', 'f').replace('sub', 's')
       tdm_map[tdm_id] = json.load(file)[0]  # id => object
-  print('Got %s entries out of %s files.' % (len(tdm_map), len(filelist)))
+  print('Got %s entries after parsing %s files.' % (len(tdm_map), len(filelist)))
   print('Done.')
 
 
@@ -55,7 +58,7 @@ def read_pfam_idmap():
     for row in pfam:
       pfam_map[row[0].strip()] = (row[1].strip(), row[3].strip())  # id => (hmmname, description)
       row_count += 1
-  print('Got %s entries out of %s rows.' % (len(pfam_map), row_count))
+  print('Got %s entries after parsing %s rows.' % (len(pfam_map), row_count))
   print('Done.')
 
 
@@ -69,7 +72,7 @@ def read_pdb_idmap():
     for row in pdb:
       pdb_map[row[0].strip()] = row[1].strip()  # id => description
       row_count += 1
-  print('Got %s entries out of %s rows.' % (len(pdb_map), row_count))
+  print('Got %s entries after parsing %s rows.' % (len(pdb_map), row_count))
   print('Done.')
 
 
@@ -121,10 +124,11 @@ def read_annotation(path, label, target_map):
           'bitscore': float(row[11])
         })
   print()
-  print('Got %s entries out of %s rows.' % (len(target_map), row_count))
+  print('Got %s entries after parsing %s rows.' % (len(target_map), row_count))
 
 
 def extend_gene_annotation(gene):
+  # PDB
   if gene['geneid'] in pdb_annotation_map:
     pdbs = pdb_annotation_map[gene['geneid']]
     for pdb in pdbs:
@@ -132,7 +136,20 @@ def extend_gene_annotation(gene):
         pdb['description'] = pdb_map[pdb['id'][:4]]
       except KeyError:
         pass
-    gene['pdb'] = pdbs
+    gene['x_pdb'] = pdbs
+  # 3DM
+  if gene['geneid'] in tdm_annotation_map:
+    tdms = tdm_annotation_map[gene['geneid']]
+    for tdm in tdms:
+      try:
+        if 'superfamily' in tdm_map[tdm['id']]:
+          pass  # TODO put both (merge?)
+        else:
+          pass  # TODO put single
+      except KeyError:
+        print('ERR:', tdm['id'])
+    gene['x_3dm'] = tdms
+  # TODO: pfam
   return gene
 
 
@@ -165,10 +182,10 @@ def extend_dataset():
 
 
 if __name__ == '__main__':
-  # read_tdm_files()
+  read_tdm_files()
   # read_pfam_idmap()
   read_pdb_idmap()
-  # read_annotation(args.tdm_annotation, '3DM', tdm_annotation_map)
+  read_annotation(args.tdm_annotation, '3DM', tdm_annotation_map)
   # read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map)
   read_annotation(args.pdb_annotation, 'PDB', pdb_annotation_map)
   extend_dataset()
