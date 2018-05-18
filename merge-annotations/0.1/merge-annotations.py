@@ -10,16 +10,17 @@ import sys
 import time
 
 MIN_ALIGNMENT_LENGTH = 15
-NUMBER_OF_TOP_HITS_TO_KEEP = 10
+NUMBER_OF_TOP_HITS_TO_KEEP = 5
 
 PFAM_IDMAP_URL = 'ftp://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam31.0/database_files/pfamA.txt.gz'
 PDB_IDMAP_URL = 'ftp://ftp.wwpdb.org/pub/pdb/derived_data/index/compound.idx'
 
-TDM_SINGLE_FIELD_MAP = [('nice_name', 'label'), ('seq_count', 'seq_count'), ('structure_count', 'structure_count')]
+TDM_SINGLE_FIELD_MAP = [('nice_name', 'description'), ('seq_count', 'seq_count'),
+                        ('structure_count', 'structure_count')]
 TDM_MULTI_FIELD_MAP = [('ec_numbers', 'ec'), ('taxonomyids', 'tax'), ('gene_names', 'gene'), ('go_terms', 'go')]
 
 parser = argparse.ArgumentParser(description='Merge annotations.')
-parser.add_argument('dataset_file', metavar='DATASET_FILE', help='.genes.json.gz input file')
+parser.add_argument('--dataset-files', help='.genes.json.gz input file(s)', nargs='+')
 parser.add_argument('--3dm-dir', dest='tdm_dir', required=True)
 parser.add_argument('--3dm-annotation', dest='tdm_annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
@@ -29,7 +30,7 @@ parser.add_argument('--pfam-idmap', required=True, help='Download from: %s' % PF
 parser.add_argument('--pdb-idmap', required=True, help='Download from: %s' % PDB_IDMAP_URL)
 parser.add_argument('--pdb-annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
-parser.add_argument('out_file', metavar='OUT_FILE', help='.genes.json.gz output file')
+parser.add_argument('--out-dir', help='Output folder for .genes.json.gz output file(s)')
 args = parser.parse_args()
 
 tdm_map = {}
@@ -135,75 +136,13 @@ def extend_gene_annotation_pdb(gene):
     pdbs = pdb_annotation_map[gene['geneid']]
     for pdb in pdbs:
       try:
-        pdb['label'] = pdb_map[pdb['id'][:4]]
+        pdb['description'] = pdb_map[pdb['id'][:4]]
       except KeyError:
         pass
     gene['x_pdb'] = pdbs
 
 
 def extend_gene_annotation_tdm(gene):
-  # 3DM
-  # {
-  #   "structure_count": 827,
-  #   "superfamily": {
-  #     "structure_count": 827,
-  #     "cached_seq_clusters": 24229,
-  #     "seq_count": 58943,
-  #     "seq_clusters": 26854,
-  #     "dbname": "nucleo_kinases_virusx_2016",
-  #     "core_length": 223,
-  #     "subfamily_count": 85,
-  #     "nice_name": "Nucleotide kinases (2016)",
-  #     "mutation_count": 6742,
-  #     "proteins_with_gene_names": 57398,
-  #     "ec_numbers": {
-  #       "2.7.4.14": "0.894",
-  #       "2.7.4.8": "12.570"
-  #     },
-  #     "taxonomyids": {
-  #       "35525": "0.532",
-  #       "9606": "0.331"
-  #     },
-  #     "proteins_with_ec_numbers": 1746,
-  #     "proteins_with_taxonomy_ids": 73344,
-  #     "gene_names": {
-  #       "gmk": "16.997",
-  #       "coaE": "14.499"
-  #     },
-  #     "go_terms": {
-  #       "GO:0015937": "4.504",
-  #       "GO:0008331": "2.632"
-  #     },
-  #     "proteins_with_go_terms": 487
-  #   },
-  #   "cached_seq_clusters": 24229,
-  #   "seq_count": 58943,
-  #   "seq_clusters": 26854,
-  #   "dbname": "nucleo_kinases_virusx_2016",
-  #   "core_length": 223,
-  #   "subfamily_count": 85,
-  #   "nice_name": "Nucleotide kinases (2016)",
-  #   "mutation_count": 6742,
-  #   "proteins_with_gene_names": 1004,
-  #   "ec_numbers": {
-  #     "2.7.4.8": "100.000"
-  #   },
-  #   "taxonomyids": {
-  #     "1408": "0.480",
-  #     "1280": "2.305"
-  #   },
-  #   "proteins_with_ec_numbers": 23,
-  #   "proteins_with_taxonomy_ids": 1041,
-  #   "gene_names": {
-  #     "gmk": "97.908",
-  #     "gmk46": "0.100"
-  #   },
-  #   "go_terms": {
-  #     "GO:0005829": "50.000",
-  #     "GO:0004385": "50.000"
-  #   },
-  #   "proteins_with_go_terms": 4
-  # }
   if gene['geneid'] in tdm_annotation_map:
     tdms = tdm_annotation_map[gene['geneid']]
     for tdm in tdms:
@@ -223,26 +162,36 @@ def extend_gene_annotation_tdm(gene):
     gene['x_3dm'] = tdms
 
 
+def extend_gene_annotation_pfam(gene):
+  if gene['geneid'] in pfam_annotation_map:
+    pfams = pdb_annotation_map[gene['geneid']]
+    for pfam in pfams:
+      pfam['name'], pfam['description'] = pdb_map[pfam['id']]
+    gene['x_pdb'] = pfams
+
+
 def deduplicate_ecs(gene):
-  gene['ecs'] = sorted(list(set(gene['ecs'])))
+  if 'ecs' in gene:
+    gene['ecs'] = sorted(list(set(gene['ecs'])))
 
 
 def extend_gene_annotation(gene):
   extend_gene_annotation_pdb(gene)
   extend_gene_annotation_tdm(gene)
-  # TODO: pfam
+  # extend_gene_annotation_pfam(gene) #TODO
   deduplicate_ecs(gene)
   return gene
 
 
-def extend_dataset():
+def extend_dataset(dataset_file_path):
   status_nth = (0b1 << 14) - 1
   stamp = time.time()
-  print('Extending dataset...')
-  approx_count = gz_approximate_number_of_records(args.dataset_file)
+  print("Extending dataset '%s' ..." % os.path.basename(dataset_file_path))
+  approx_count = gz_approximate_number_of_records(dataset_file_path)
   print('Approx. number of records: %s' % approx_count)
   one_percent = int(approx_count / 100)
-  with gzip.open(args.dataset_file, 'rt') as file, gzip.open(args.out_file, 'wt') as out:
+  out_file_path = os.path.join(args.out_dir, os.path.basename(dataset_file_path))
+  with gzip.open(dataset_file_path, 'rt') as file, gzip.open(out_file_path, 'wt') as out:
     is_header = True
     row_count = 0
     for line in file:
@@ -260,14 +209,17 @@ def extend_dataset():
       is_header = not is_header
   print()
   print('Done')
-  print('Output: %s' % args.out_file)
+  print('Output: %s' % out_file_path)
 
 
 if __name__ == '__main__':
   read_tdm_files()
-  # read_pfam_idmap()
+  read_pfam_idmap()
   read_pdb_idmap()
   read_annotation(args.tdm_annotation, '3DM', tdm_annotation_map)
-  # read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map)
+  # read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map) #TODO
   read_annotation(args.pdb_annotation, 'PDB', pdb_annotation_map)
-  extend_dataset()
+  print('\n')
+  for d in args.dataset_files:
+    extend_dataset(d)
+    print('\n')
