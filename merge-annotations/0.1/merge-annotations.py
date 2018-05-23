@@ -25,8 +25,8 @@ parser.add_argument('--3dm-dir', dest='tdm_dir', required=True)
 parser.add_argument('--3dm-annotation', dest='tdm_annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--pfam-idmap', required=True, help='Download from: %s' % PFAM_IDMAP_URL)
-# parser.add_argument('--pfam-annotation', required=True,
-#                     help='tab-separated file that has to be sorted by evalue (best hits first)')
+parser.add_argument('--pfam-annotation', required=True,
+                    help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--pdb-idmap', required=True, help='Download from: %s' % PDB_IDMAP_URL)
 parser.add_argument('--pdb-annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
@@ -164,10 +164,10 @@ def extend_gene_annotation_tdm(gene):
 
 def extend_gene_annotation_pfam(gene):
   if gene['geneid'] in pfam_annotation_map:
-    pfams = pdb_annotation_map[gene['geneid']]
+    pfams = pfam_annotation_map[gene['geneid']]
     for pfam in pfams:
-      pfam['name'], pfam['description'] = pdb_map[pfam['id']]
-    gene['x_pdb'] = pfams
+      pfam['name'], pfam['description'] = pfam_map[pfam['id'].split('.')[0]]
+    gene['x_pfam'] = pfams
 
 
 def deduplicate_ecs(gene):
@@ -178,7 +178,7 @@ def deduplicate_ecs(gene):
 def extend_gene_annotation(gene):
   extend_gene_annotation_pdb(gene)
   extend_gene_annotation_tdm(gene)
-  # extend_gene_annotation_pfam(gene) #TODO
+  extend_gene_annotation_pfam(gene)
   deduplicate_ecs(gene)
   return gene
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
   read_pfam_idmap()
   read_pdb_idmap()
   read_annotation(args.tdm_annotation, '3DM', tdm_annotation_map)
-  # read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map) #TODO
+  read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map)
   read_annotation(args.pdb_annotation, 'PDB', pdb_annotation_map)
   print('\n')
   for d in args.dataset_files:
