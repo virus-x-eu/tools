@@ -28,6 +28,7 @@ parser.add_argument('--pfam-idmap', required=True, help='Download from: %s' % PF
 parser.add_argument('--pfam-annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--pdb-idmap', required=True, help='Download from: %s' % PDB_IDMAP_URL)
+parser.add_argument('--prevalence-map', required=True)
 parser.add_argument('--pdb-annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--out-dir', help='Output folder for .genes.json.gz output file(s)')
@@ -40,6 +41,7 @@ pdb_map = {}
 tdm_annotation_map = {}
 pfam_annotation_map = {}
 pdb_annotation_map = {}
+prevalence_map = {}
 
 
 def read_tdm_files():
@@ -77,6 +79,23 @@ def read_pdb_idmap():
       pdb_map[row[0].strip()] = row[1].strip()  # id => description
       row_count += 1
   print('Got %s entries after parsing %s rows.' % (len(pdb_map), row_count))
+  print('Done.')
+
+
+def read_prevalence_map():
+  print('Loading data from prevalence map file...')
+  approx_count = gz_approximate_number_of_records(args.prevalence_map)
+  print('Approx. number of records: %s' % approx_count)
+  row_count = 0
+  with gzip.open(args.prevalence_map, 'rt', newline='') as file:
+    file.readline()  # skip header row
+    pre = csv.reader(file, delimiter=' ')
+    for row in pre:
+      prevalence_map[row[1].strip()] = {'prevalence': int(row[4].strip()),
+                                        'clusterid': row[0].strip(),
+                                        'clustersize': int(row[3].strip())}
+      row_count += 1
+  print('Got %s entries after parsing %s rows.' % (len(prevalence_map), row_count))
   print('Done.')
 
 
@@ -151,14 +170,14 @@ def extend_gene_annotation_tdm(gene):
       for source_field, target_field in TDM_SINGLE_FIELD_MAP:
         tdm[target_field] = ref[source_field]
       # multi value maps
-      for source_field, target_field in TDM_MULTI_FIELD_MAP:
-        tdm[target_field] = []
-        if ref[source_field]:
-          for k, v in ref[source_field].items():
-            tdm[target_field].append({'id': k, 'perc': float(v)})
-        elif 'superfamily' in ref:
-          for k, v in ref['superfamily'][source_field].items():
-            tdm[target_field].append({'id': k, 'perc': float(v)})
+      # for source_field, target_field in TDM_MULTI_FIELD_MAP:
+      #  tdm[target_field] = []
+      #  if ref[source_field]:
+      #    for k, v in ref[source_field].items():
+      #      tdm[target_field].append({'id': k, 'perc': float(v)})
+      #  elif 'superfamily' in ref:
+      #    for k, v in ref['superfamily'][source_field].items():
+      #      tdm[target_field].append({'id': k, 'perc': float(v)})
     gene['x_3dm'] = tdms
 
 
@@ -170,6 +189,14 @@ def extend_gene_annotation_pfam(gene):
     gene['x_pfam'] = pfams
 
 
+def extend_gene_annotation_prevalence(gene):
+  if gene['geneid'] in prevalence_map:
+    pre = prevalence_map[gene['geneid']]
+    gene['x_prevalence'] = pre['prevalence']
+    gene['x_clusterid'] = pre['clusterid']
+    gene['x_clustersize'] = pre['clustersize']
+
+
 def deduplicate_ecs(gene):
   if 'ecs' in gene:
     gene['ecs'] = sorted(list(set(gene['ecs'])))
@@ -179,6 +206,7 @@ def extend_gene_annotation(gene):
   extend_gene_annotation_pdb(gene)
   extend_gene_annotation_tdm(gene)
   extend_gene_annotation_pfam(gene)
+  extend_gene_annotation_prevalence(gene)
   deduplicate_ecs(gene)
   return gene
 
@@ -216,6 +244,7 @@ if __name__ == '__main__':
   read_tdm_files()
   read_pfam_idmap()
   read_pdb_idmap()
+  read_prevalence_map()
   read_annotation(args.tdm_annotation, '3DM', tdm_annotation_map)
   read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map)
   read_annotation(args.pdb_annotation, 'PDB', pdb_annotation_map)
