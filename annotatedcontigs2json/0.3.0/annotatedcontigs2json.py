@@ -11,6 +11,8 @@ import pysam
 import numpy
 from math import ceil
 from multiprocessing import Pool, cpu_count
+import gzip
+import csv
 
 coverage_avg_span = 10
 ones_val = int(coverage_avg_span / 2)
@@ -20,6 +22,7 @@ contigid_to_virsorter_prophage = {}
 
 length_map = {}
 coverage_map = {}
+rpkm_map = {}
 
 progress_pos = 0
 progress_total = 0
@@ -75,6 +78,7 @@ if __name__ == '__main__':
   parser.add_argument("--virsorter-csv", dest='input_virsorter', required=False, help='VirSorter input file')
   parser.add_argument('--sample-names', nargs='*', dest='names')
   parser.add_argument('--sample-bam-files', nargs='*', dest='bams')
+  parser.add_argument('--sample-rpkm-files', nargs='*', dest='rpkms', help='BBMap .rpkm file format (gzipped)')
   parser.add_argument("--json", dest='output_json', required=True, help='json output file')
   parser.add_argument("--threads", type=int, dest='threads', help='number parallel threads for BAM file reader',
                       default=cpu_count())
@@ -109,6 +113,19 @@ if __name__ == '__main__':
             merge_with_global_coverage_map(proc_result)
           else:
             exit(1)
+
+  if args.names and args.rpkms:
+    named_rpkms = zip(args.names, args.rpkms)
+    for sample_name, rpkm in named_rpkms:
+      with gzip.open(rpkm, 'rt', newline='') as file:
+        for _ in [1, 2, 3, 4, 5]:  # skip header rows
+          file.readline()
+        rows = csv.reader(file, delimiter='\t')
+        for row in rows:
+          contigid = row[0].split(' ', 1)[0]
+          if contigid not in rpkm_map:
+            rpkm_map[contigid] = {}
+          rpkm_map[contigid][sample_name] = float(row[5])
 
   if args.input_virsorter:
     with open(args.input_virsorter, 'r') as virsorterFile:
@@ -155,6 +172,8 @@ if __name__ == '__main__':
       }
       if (not args.skip_coverage) and args.names and args.bams and str(record.id) in coverage_map:
         obj['coverage'] = [{'name': k, 'values': v} for k, v in coverage_map[str(record.id)].items()]
+      if args.rpkms and str(record.id) in rpkm_map:
+        obj['rpkm'] = [{'name': k, 'value': v} for k, v in rpkm_map[str(record.id)].items()]
       if id in contigid_to_virsorter_phage or id in contigid_to_virsorter_prophage:
         obj["virsorter"] = {}
         if id in contigid_to_virsorter_phage:
