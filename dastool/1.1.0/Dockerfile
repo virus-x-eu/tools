@@ -10,8 +10,8 @@ RUN apt-get update && \
     rm pullseq_v1.0.2_linux64.zip && \
     ln -s /lib/x86_64-linux-gnu/libpcre.so.3 /usr/lib/libpcre.so.1 && \
     cd /opt/ && \
-    wget --progress=dot:giga "https://github.com/cmks/DAS_Tool/archive/${DASTOOL_VERSION}.tar.gz" -O- | tar xz && \
-    mv "DAS_Tool-${DASTOOL_VERSION}" /opt/dastool && \
+    wget --progress=dot:giga "https://github.com/cmks/DAS_Tool/archive/e46914f31f9ba036fcd73f33742dcb61d68632bd.tar.gz" -O- | tar xz && \
+    mv "DAS_Tool-e46914f31f9ba036fcd73f33742dcb61d68632bd" /opt/dastool && \
     cd /opt/dastool && \
     R CMD INSTALL "./package/DASTool_${DASTOOL_VERSION}.tar.gz" && \
     unzip db.zip -d db && \
