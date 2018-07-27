@@ -1,9 +1,14 @@
 FROM ubuntu:rolling
 ENV DASTOOL_VERSION=1.1.0
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y wget r-base r-cran-data.table r-cran-domc r-cran-ggplot2 ruby prodigal ncbi-blast+ && \
+    apt-get install -yq wget r-base r-cran-data.table r-cran-domc r-cran-ggplot2 ruby prodigal ncbi-blast+ && \
     cd /usr/local/bin/ && \
     wget --progress=dot:giga "http://github.com/bbuchfink/diamond/releases/download/v0.9.22/diamond-linux64.tar.gz" -O- | tar xz && \
+    wget "https://github.com/bcthomas/pullseq/releases/download/1.0.2/pullseq_v1.0.2_linux64.zip" && \
+    unzip pullseq_v1.0.2_linux64.zip && \
+    rm pullseq_v1.0.2_linux64.zip && \
+    ln -s /lib/x86_64-linux-gnu/libpcre.so.3 /usr/lib/libpcre.so.1 && \
     cd /opt/ && \
     wget --progress=dot:giga "https://github.com/cmks/DAS_Tool/archive/${DASTOOL_VERSION}.tar.gz" -O- | tar xz && \
     mv "DAS_Tool-${DASTOOL_VERSION}" /opt/dastool && \
