@@ -8,6 +8,7 @@ import csv
 import tempfile
 import sys
 import time
+import md5
 
 MIN_ALIGNMENT_LENGTH = 15
 NUMBER_OF_TOP_HITS_TO_KEEP = 5
@@ -202,12 +203,37 @@ def deduplicate_ecs(gene):
     gene['ecs'] = sorted(list(set(gene['ecs'])))
 
 
+# hash tool version: 1.2
+intToHashAlphabet = "ACEFHJKLMNPTUXYZ013689"
+int2aa = list('ACDEFGHIKLMNPQRSTVWYX')
+aa2int = dict()
+for i in range(len(int2aa)):
+  aa2int[int2aa[i]] = i
+DEFAULT_SYM = 0
+HASH_LEN = 6
+HASH_ALPH_SIZE = len(intToHashAlphabet)
+
+
+def get_hash(seq):
+  h = [0] * HASH_LEN
+  for s in range(len(seq)):
+    h[s % HASH_LEN] = h[s % HASH_LEN] + aa2int.get(seq[s], DEFAULT_SYM)
+    h[s % HASH_LEN] = h[s % HASH_LEN] % HASH_ALPH_SIZE
+  return "".join([intToHashAlphabet[h[i]] for i in range(len(h))]) \
+         + "." + md5.new(str(seq)).hexdigest()[0:16 - HASH_LEN].upper()
+
+
+def add_prot_hash(gene):
+  gene['hash'] = get_hash(gene['amino'])
+
+
 def extend_gene_annotation(gene):
   extend_gene_annotation_pdb(gene)
   extend_gene_annotation_tdm(gene)
   extend_gene_annotation_pfam(gene)
   extend_gene_annotation_prevalence(gene)
   deduplicate_ecs(gene)
+  add_prot_hash(gene)
   return gene
 
 

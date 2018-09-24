@@ -6,9 +6,6 @@ RUN apt-get update && \
     tar xf /root/interproscan.tar.gz --exclude data -C /root/ && \
     mv /root/interproscan-${IPS_VERSION}/ /opt/interproscan && \
     ln -s /var/spool/cwl/interproscan-data-${IPS_VERSION}/ /opt/interproscan/data && \
-    mkdir -p /opt/interproscan/.interproscan-5/ && \
-    chmod go+rx /opt/interproscan/.interproscan-5/ && \
-    ln -s /var/spool/cwl/interproscan.properties /opt/interproscan/.interproscan-5/interproscan.properties && \
     rm -r /root/interproscan* && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
