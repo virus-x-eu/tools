@@ -9,7 +9,7 @@ RUN apt-get update && \
     unzip pplacer.zip && \
     cp -r /root/pplacer-Linux-v1.1.alpha19/* /usr/local/bin/ && \
     rm -r /root/pplacer* && \
-    chmod +w /usr/local/lib/python2.7/dist-packages/checkm/DATA_CONFIG && \
+    chown 1000 /usr/local/lib/python2.7/dist-packages/checkm/DATA_CONFIG && \
     chmod +x /usr/local/bin/run_checkm.sh && \
     apt-get purge -y wget unzip && \
     apt-get autoremove -y --purge && \
