@@ -21,7 +21,7 @@ args = parser.parse_args()
 raw_url_template = 'https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=%s&result=read_run'
 data = pd.read_csv(raw_url_template % args.run_accession, sep='\t')
 fastq_urls = data['fastq_ftp'][0]
-wget = ['/usr/bin/wget', '-nc', '--progress=dot:giga', '--read-timeout', '5']
+wget = ['/usr/bin/wget', '-nc', '--progress=dot:giga', '--read-timeout', '5', '--tries', '300']
 
 
 def fastq_dump(id, from_ncbi=False):
