@@ -7,7 +7,7 @@ RUN apt-get update && \
     git checkout v${FASTP_VERSION} && \
     make && \
     make install && \
-    apt-get remove --purge git build-essential && \
-    apt-get autoremove --purge && \
+    apt-get remove -y --purge git build-essential && \
+    apt-get autoremove -y --purge && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
