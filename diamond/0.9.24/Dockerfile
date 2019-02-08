@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:3.8
 ENV DIAMOND_VERSION="0.9.24"
 RUN apk add --no-cache g++ make cmake zlib-dev && \
     wget "http://github.com/bbuchfink/diamond/archive/v${DIAMOND_VERSION}.tar.gz" && \
