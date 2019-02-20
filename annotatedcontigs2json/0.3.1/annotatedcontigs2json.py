@@ -15,7 +15,6 @@ import gzip
 import csv
 
 coverage_avg_span = 10
-ones_val = int(coverage_avg_span / 2)
 
 contigid_to_virsorter_phage = {}
 contigid_to_virsorter_prophage = {}
@@ -43,9 +42,10 @@ def parse_bam_for_ids(chunk, sample_name, bam_path):
       if len(cov_vals) < coverage_avg_span:
         coverage_map_chunk[ref_id][sample_name] = []
       else:
-        coverage_map_chunk[ref_id][sample_name] = numpy.convolve(cov_vals, numpy.ones(ones_val, ) / ones_val,
+        coverage_map_chunk[ref_id][sample_name] = numpy.convolve(cov_vals,
+                                                                 numpy.ones(coverage_avg_span, ) / coverage_avg_span,
                                                                  mode='same')[
-                                                  ones_val - 1:-ones_val:coverage_avg_span].astype(int).tolist()
+                                                  int(coverage_avg_span / 2)::coverage_avg_span].astype(int).tolist()
     except ValueError:
       print('ERROR: Cannot find index file %s.bai' % bam_path)
       return False
