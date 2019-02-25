@@ -19,25 +19,30 @@ import (
 	"fmt"
 	"github.com/biogo/hts/bam"
 	"github.com/biogo/hts/bgzf"
+	"github.com/biogo/hts/bgzf/cache"
 	"github.com/biogo/hts/sam"
 	"github.com/shenwei356/bio/seqio/fastx"
 	"io"
 	"log"
+	"math"
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 const CovAvgSpan int = 10
 
 type Contig struct {
-	ID         string     `json:"id"`
-	Nucleotide string     `json:"nucleotide"`
-	Length     int        `json:"length"`
-	Coverage   []Coverage `json:"coverage,omitempty"`
-	Virsorter  *Virsorter `json:"virsorter,omitempty"`
-	Rpkm       []Rpkm     `json:"rpkm,omitempty"`
+	ID         string      `json:"id"`
+	Nucleotide string      `json:"nucleotide"`
+	Length     int         `json:"length"`
+	Coverage   []*Coverage `json:"coverage,omitempty"`
+	Virsorter  *Virsorter  `json:"virsorter,omitempty"`
+	Rpkm       []*Rpkm     `json:"rpkm,omitempty"`
 }
 
 type Coverage struct {
@@ -58,14 +63,18 @@ type Rpkm struct {
 type Contigs map[string]*Contig
 
 var (
-	fastaFile       = flag.String("fasta", "", "FASTA input file")
-	virSorterCSV    = flag.String("virsorter-csv", "", "VirSorter input file")
-	sampleNames     = flag.String("sample-names", "", "Comma-separated list of sample names")
-	sampleBAMFiles  = flag.String("sample-bam-files", "", "Comma-separated list of sorted BAM files")
-	sampleRPKMFiles = flag.String("sample-rpkm-files", "", "Comma-separated list of BBMap .rpkm files (gzipped)")
-	jsonOutputFile  = flag.String("json", "", "JSON output file")
-	skipCoverage    = flag.Bool("skip-coverage", false, "Skip coverage calculation")
+	fastaFile       = flag.String("fasta", "", "FASTA input `file`")
+	virSorterCSV    = flag.String("virsorter-csv", "", "VirSorter input `file`")
+	sampleNames     = flag.String("sample-names", "", "Comma-separated `list` of sample names")
+	sampleBAMFiles  = flag.String("sample-bam-files", "", "Comma-separated `list` of sorted BAM files")
+	sampleRPKMFiles = flag.String("sample-rpkm-files", "", "Comma-separated `list` of BBMap .rpkm `files` (gzipped)")
+	jsonOutputFile  = flag.String("json", "", "JSON output `file`")
+	skipCoverage    = flag.Bool("skip-coverage", false, "Skip detailed coverage calculation (BAM) entirely")
+	reduceRAMUsage  = flag.Bool("reduce-ram-usage", false, "Reduce ram usage by parsing BAM files sequentially")
+	cpuprofile      = flag.String("cpu-prof", "", "Write cpu profile to `file` (used for benchmarking)")
 	help            = flag.Bool("help", false, "Display help")
+	mutex           = &sync.Mutex{}
+	wg              sync.WaitGroup
 )
 
 func main() {
@@ -75,8 +84,19 @@ func main() {
 		os.Exit(0)
 	}
 
-	// check for required inputs
+	// Initialize CPU profiling
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
+	// Validate input parameters
 	if *fastaFile == "" {
 		log.Fatal("Error: FASTA input file parameter is required.")
 	}
@@ -111,13 +131,31 @@ func main() {
 
 	// FASTA
 	log.Print("Parsing contigs FASTA file ...")
-	parseContigsFastaFile(*fastaFile, &contigs)
+	contigIDs := parseContigsFastaFile(*fastaFile, &contigs)
 
 	// BAM
 	if !*skipCoverage && *sampleBAMFiles != "" {
-		log.Print("Parsing BAM files ...")
+		log.Printf("Parsing %d BAM files ...", len(bamFileNames))
+		numCPU := runtime.NumCPU()
+		var threadsPerBAMFile int
+		if *reduceRAMUsage {
+			threadsPerBAMFile = numCPU + 2
+			log.Println("sequentially in reduced RAM usage mode ...")
+		} else {
+			threadsPerBAMFile = int(math.Ceil(float64(numCPU)/float64(len(bamFileNames)))) + 1
+		}
+		bamFileNames = strings.Split(*sampleBAMFiles, ",")
+		log.Printf("using %d threads per BAM file.", threadsPerBAMFile)
 		for sampleIndex, sampleName := range sampleNameList {
-			parseBAMFile(sampleName, bamFileNames[sampleIndex], &contigs)
+			if *reduceRAMUsage {
+				parseBAMFile(sampleName, bamFileNames[sampleIndex], &contigs, threadsPerBAMFile)
+			} else {
+				wg.Add(1)
+				go parseBAMFile(sampleName, bamFileNames[sampleIndex], &contigs, threadsPerBAMFile)
+			}
+		}
+		if !*reduceRAMUsage {
+			wg.Wait()
 		}
 	}
 
@@ -137,7 +175,7 @@ func main() {
 
 	// JSON
 	log.Print("Writing JSON output file ...")
-	objCount := writeJson(&contigs, *jsonOutputFile)
+	objCount := writeJson(&contigs, contigIDs, *jsonOutputFile)
 	log.Printf("%d JSON objects written to %q.", objCount, *jsonOutputFile)
 
 	elapsed := time.Since(start)
@@ -152,12 +190,13 @@ func headerToID(header string) string {
 	return headerFields[0]
 }
 
-func parseContigsFastaFile(path string, contigs *Contigs) {
+func parseContigsFastaFile(path string, contigs *Contigs) []string {
 	reader, err := fastx.NewDefaultReader(path)
 	if err != nil {
 		log.Fatalf("error reading FASTA: %v\n", err)
 	}
 	defer reader.Close()
+	var contigIDs []string
 	for {
 		fastaRec, err := reader.Read()
 		if err != nil {
@@ -174,10 +213,12 @@ func parseContigsFastaFile(path string, contigs *Contigs) {
 			Nucleotide: string(fastaRec.Seq.Seq),
 			Length:     fastaRec.Seq.Length(),
 		}
+		contigIDs = append(contigIDs, string(fastaRec.ID))
 	}
+	return contigIDs
 }
 
-func openBAMFile(path string) (*os.File, *bam.Reader) {
+func openBAMFile(path string, threads int) (*os.File, *bam.Reader) {
 	var r io.Reader
 	f, err := os.Open(path)
 	if err != nil {
@@ -192,15 +233,19 @@ func openBAMFile(path string) (*os.File, *bam.Reader) {
 	}
 	r = f
 
-	b, err := bam.NewReader(r, 0)
+	b, err := bam.NewReader(r, threads)
 	if err != nil {
 		log.Fatalf("Could not read BAM: %q\n", err)
 	}
+	b.SetCache(cache.NewLRU(6000))
 	return f, b
 }
 
-func parseBAMFile(sampleName string, path string, contigs *Contigs) {
-	f, b := openBAMFile(path)
+func parseBAMFile(sampleName string, path string, contigs *Contigs, threads int) {
+	if !*reduceRAMUsage {
+		defer wg.Done()
+	}
+	f, b := openBAMFile(path, threads)
 	defer f.Close()
 	defer b.Close()
 	b.Omit(bam.AllVariableLengthData)
@@ -223,8 +268,9 @@ func parseBAMFile(sampleName string, path string, contigs *Contigs) {
 			// wrap up current contig and save results
 			contigID := headerToID(lastSeenContig.Name())
 			c := Coverage{Name: sampleName, Values: calcCovAvg(&cov)}
-			(*contigs)[contigID].Coverage = append((*contigs)[contigID].Coverage, c)
-
+			mutex.Lock()
+			(*contigs)[contigID].Coverage = append((*contigs)[contigID].Coverage, &c)
+			mutex.Unlock()
 			// stop parser loop at the first unmapped sequence
 			if bamRec.Ref.Name() == "*" {
 				break
@@ -241,12 +287,9 @@ func parseBAMFile(sampleName string, path string, contigs *Contigs) {
 }
 
 func pileupRec(rec *sam.Record, cov *[]int) {
-	recStart := rec.Start()
 	recEnd := rec.End()
-	for i := 0; i < rec.Ref.Len(); i++ {
-		if recStart <= i && recEnd >= i {
-			(*cov)[i]++
-		}
+	for i := rec.Start(); i < recEnd; i++ {
+		(*cov)[i]++
 	}
 }
 
@@ -303,7 +346,7 @@ func parseRPKMFile(sampleName string, path string, contigs *Contigs) {
 			log.Fatalf("Error parsing RPKM value: %q\n", err)
 		}
 		r := Rpkm{Name: sampleName, Value: val}
-		(*contigs)[contigID].Rpkm = append((*contigs)[contigID].Rpkm, r)
+		(*contigs)[contigID].Rpkm = append((*contigs)[contigID].Rpkm, &r)
 	}
 }
 
@@ -357,19 +400,19 @@ func parseVirSorterCSV(path string, contigs *Contigs) {
 	}
 }
 
-func writeJson(contigs *Contigs, path string) int {
-	out, err := os.Create(*jsonOutputFile)
+func writeJson(contigs *Contigs, contigIDs []string, path string) int {
+	out, err := os.Create(path)
 	if err != nil {
 		log.Fatalf("Could not open file for writing: %q\n", err)
 	}
 	defer out.Close()
 	var i int
-	for k, v := range *contigs {
+	for _, k := range contigIDs {
 		_, err := fmt.Fprintf(out, "{\"index\": {\"_id\": %s}}\n", k)
 		if err != nil {
 			log.Fatalf("Could not write to file: %q\n", err)
 		}
-		obj, err := json.Marshal(v)
+		obj, err := json.Marshal((*contigs)[k])
 		if err != nil {
 			log.Fatalf("Could not generate JSON object for key %s:", k)
 		}
