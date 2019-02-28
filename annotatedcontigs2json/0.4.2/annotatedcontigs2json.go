@@ -21,6 +21,7 @@ import (
 	"github.com/biogo/hts/bgzf"
 	"github.com/biogo/hts/bgzf/cache"
 	"github.com/biogo/hts/sam"
+	"github.com/shenwei356/bio/seq"
 	"github.com/shenwei356/bio/seqio/fastx"
 	"io"
 	"log"
@@ -135,7 +136,6 @@ func main() {
 
 	// BAM
 	if !*skipCoverage && *sampleBAMFiles != "" {
-		log.Printf("Parsing %d BAM files ...", len(bamFileNames))
 		numCPU := runtime.NumCPU()
 		var threadsPerBAMFile int
 		if *reduceRAMUsage {
@@ -145,7 +145,7 @@ func main() {
 			threadsPerBAMFile = int(math.Ceil(float64(numCPU)/float64(len(bamFileNames)))) + 1
 		}
 		bamFileNames = strings.Split(*sampleBAMFiles, ",")
-		log.Printf("using %d threads per BAM file.", threadsPerBAMFile)
+		log.Printf("Parsing %d BAM files using %d threads per BAM file ...", len(bamFileNames), threadsPerBAMFile)
 		for sampleIndex, sampleName := range sampleNameList {
 			if *reduceRAMUsage {
 				parseBAMFile(sampleName, bamFileNames[sampleIndex], &contigs, threadsPerBAMFile)
@@ -192,6 +192,7 @@ func headerToID(header string) string {
 
 func parseContigsFastaFile(path string, contigs *Contigs) []string {
 	reader, err := fastx.NewDefaultReader(path)
+	seq.ValidateSeq = false
 	if err != nil {
 		log.Fatalf("error reading FASTA: %v\n", err)
 	}
