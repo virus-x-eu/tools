@@ -409,7 +409,7 @@ func writeJson(contigs *Contigs, contigIDs []string, path string) int {
 	defer out.Close()
 	var i int
 	for _, k := range contigIDs {
-		_, err := fmt.Fprintf(out, "{\"index\": {\"_id\": %s}}\n", k)
+		_, err := fmt.Fprintf(out, "{\"index\": {\"_id\": \"%s\"}}\n", k)
 		if err != nil {
 			log.Fatalf("Could not write to file: %q\n", err)
 		}
