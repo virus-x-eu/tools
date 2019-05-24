@@ -8,7 +8,7 @@ import csv
 import tempfile
 import sys
 import time
-import md5
+from hashlib import md5
 
 MIN_ALIGNMENT_LENGTH = 15
 NUMBER_OF_TOP_HITS_TO_KEEP = 5
@@ -21,8 +21,8 @@ TDM_SINGLE_FIELD_MAP = [('nice_name', 'description'), ('seq_count', 'seq_count')
 TDM_MULTI_FIELD_MAP = [('ec_numbers', 'ec'), ('taxonomyids', 'tax'), ('gene_names', 'gene'), ('go_terms', 'go')]
 
 parser = argparse.ArgumentParser(description='Merge annotations.')
-parser.add_argument('--dataset-files', help='.genes.json.gz input file(s)', nargs='+')
-parser.add_argument('--3dm-dir', dest='tdm_dir', required=True)
+parser.add_argument('--dataset-files', help='.genes.json.gz input file(s)', nargs='+', required=True)
+parser.add_argument('--3dm-systems-json', dest='tdm_systems_json', required=True)
 parser.add_argument('--3dm-annotation', dest='tdm_annotation', required=True,
                     help='tab-separated file that has to be sorted by evalue (best hits first)')
 parser.add_argument('--pfam-idmap', required=True, help='Download from: %s' % PFAM_IDMAP_URL)
@@ -45,15 +45,12 @@ pdb_annotation_map = {}
 prevalence_map = {}
 
 
-def read_tdm_files():
-  filelist = list(os.walk(args.tdm_dir))[0][2]
-  print('Loading data from 3DM metadata files...')
-  for filename in filelist:
-    with open(os.path.join(args.tdm_dir, filename), 'rt') as file:
-      # cat names | sed 's/_virusx_2016//' | sed 's/fam/f/'  | sed 's/sub/s/'
-      tdm_id = filename.replace('.json', '').replace('_virusx_2016', '').replace('fam', 'f').replace('sub', 's')
-      tdm_map[tdm_id] = json.load(file)[0]  # id => object
-  print('Got %s entries after parsing %s files.' % (len(tdm_map), len(filelist)))
+def read_tdm_file():
+  print('Loading data from 3DM metadata file...')
+  with gzip.open(args.tdm_systems_json, 'rt') as file:
+    global tdm_map
+    tdm_map = json.load(file)  # id => object
+  print('Got %s entries from 3DM metadata file.' % (len(tdm_map)))
   print('Done.')
 
 
@@ -110,6 +107,8 @@ def gz_approximate_number_of_records(path):
           tmpgz.write(file.readline())
         sample_size = file.tell()
     sample_gz_size = tmp.tell()
+  if sample_gz_size == 0 or sample_size == 0:
+    return 0
   return int(gz_size * (sample_size / sample_gz_size) * (sample_amount / sample_size))
 
 
@@ -130,8 +129,9 @@ def read_annotation(path, label, target_map):
           print('%s%%' % int(row_count / one_percent), end=' ')
           stamp = time.time()
         sys.stdout.flush()
-      geneid = row[0][10:]
-      if not geneid in target_map:
+      # geneid = row[0][10:]  #NOTE: first column in older files was prefixed with 'consensus_'
+      geneid = row[0]
+      if geneid not in target_map:
         target_map[geneid] = []
       if int(row[3]) >= MIN_ALIGNMENT_LENGTH and len(target_map[geneid]) < NUMBER_OF_TOP_HITS_TO_KEEP:
         target_map[geneid].append({
@@ -220,7 +220,7 @@ def get_hash(seq):
     h[s % HASH_LEN] = h[s % HASH_LEN] + aa2int.get(seq[s], DEFAULT_SYM)
     h[s % HASH_LEN] = h[s % HASH_LEN] % HASH_ALPH_SIZE
   return "".join([intToHashAlphabet[h[i]] for i in range(len(h))]) \
-         + "." + md5.new(str(seq)).hexdigest()[0:16 - HASH_LEN].upper()
+         + "." + md5(seq.encode('UTF8')).hexdigest()[0:16 - HASH_LEN].upper()
 
 
 def add_prot_hash(gene):
@@ -267,13 +267,13 @@ def extend_dataset(dataset_file_path):
 
 
 if __name__ == '__main__':
-  read_tdm_files()
+  read_tdm_file()
   read_pfam_idmap()
   read_pdb_idmap()
   read_prevalence_map()
   read_annotation(args.tdm_annotation, '3DM', tdm_annotation_map)
-  read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map)
-  read_annotation(args.pdb_annotation, 'PDB', pdb_annotation_map)
+  #read_annotation(args.pfam_annotation, 'Pfam', pfam_annotation_map)
+  #read_annotation(args.pdb_annotation, 'PDB', pdb_annotation_map)
   print('\n')
   for d in args.dataset_files:
     extend_dataset(d)
