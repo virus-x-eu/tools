@@ -52,7 +52,7 @@ def parse_first_experiment(doc):
   design_description = exp_xml.xpath('//DESIGN/DESIGN_DESCRIPTION/text()')
   return {
     'title': exp_xml.findtext('TITLE') or '',
-    'platform': list(platform_xml)[0].tag.lower() or '',
+    'platform': str(list(platform_xml)[0].tag).lower() or '',
     'instrument_model': platform_xml[0].findtext('INSTRUMENT_MODEL') or '',
     'strategy': exp_xml.xpath('//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_STRATEGY/text()')[0] or '',
     'layout': exp_xml.xpath('name(//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_LAYOUT/*[1])').lower() or '',
