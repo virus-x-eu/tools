@@ -19,7 +19,7 @@
 </head>
 <body>
 
-<div class="container-fluid" style="background-color: #3e4a63">
+<div class="container" style="background-color: #3e4a63">
   <div class="row">
     <div class="col" style="height: 20px"></div>
   </div>
@@ -55,16 +55,35 @@
       <h5>strategy</h5>
       <ul id="strategy-distribution"></ul>
     </div>
+    <div class="col">
+      <h5>layout</h5>
+      <ul id="layout-distribution"></ul>
+    </div>
+    <div class="col">
+      <h5>library source</h5>
+      <ul id="library_source-distribution"></ul>
+    </div>
   </div>
   <div class="row">
     <div class="col" style="text-align: center; padding-top:10px;">
       <h3>Results <sup id="result-count"></sup></h3>
+      <h5 id="page-indicator"></h5>
+      <button class="btn btn-sm btn-dark" type="button" id="scroll-button">more</button>
     </div>
   </div>
   <div class="row">
     <div class="col">
       <table class="table">
         <thead>
+        <tr>
+          <td>
+            <button class="btn btn-sm btn-dark" type="button" id="export-button">
+              export <span id="export-count"></span> IDs
+            </button>
+            <a id="download-submission-ids" style="display: none"
+               download="submissions.list">Download</a>
+          </td>
+        </tr>
         <tr>
           <td>submission</td>
           <td>keywords</td>

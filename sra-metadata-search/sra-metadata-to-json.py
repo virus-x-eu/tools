@@ -49,11 +49,15 @@ def parse_first_experiment(doc):
   # use only first experiment because their attributes are usually almost identical
   exp_xml = doc.find('EXPERIMENT')
   platform_xml = exp_xml.find('PLATFORM')
+  design_description = exp_xml.xpath('//DESIGN/DESIGN_DESCRIPTION/text()')
   return {
     'title': exp_xml.findtext('TITLE') or '',
     'platform': list(platform_xml)[0].tag.lower() or '',
     'instrument_model': platform_xml[0].findtext('INSTRUMENT_MODEL') or '',
     'strategy': exp_xml.xpath('//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_STRATEGY/text()')[0] or '',
+    'layout': exp_xml.xpath('name(//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_LAYOUT/*[1])').lower() or '',
+    'library_source': exp_xml.xpath('//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_SOURCE/text()')[0].lower() or '',
+    'design_description': design_description[0] if len(design_description) > 0 else '',
   }
 
 
