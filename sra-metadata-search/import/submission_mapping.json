@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "index": {
+      "mapping": {
+        "nested_objects": {
+          "limit": 10000
+        },
+        "total_fields": {
+          "limit": 1000
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+    },
+    "date_detection": false
+  }
+}

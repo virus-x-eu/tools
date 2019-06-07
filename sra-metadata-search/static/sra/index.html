@@ -1,0 +1,85 @@
+<html>
+<head>
+  <title>SRA metadata search</title>
+  <link rel="stylesheet" href="lib/bootstrap.min.css">
+  <style type="text/css">
+    em {
+      border: 1px solid #ffffff44;
+      font-style: normal;
+      border-radius: 3px;
+      padding: 1px;
+    }
+
+    body {
+      color: #eee;
+      background-color: #6d718e;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container-fluid" style="background-color: #3e4a63">
+  <div class="row">
+    <div class="col" style="height: 20px"></div>
+  </div>
+  <div class="row">
+    <div class="col-3">
+      <h4 style="font-variant: small-caps">SRA metadata search</h4>
+    </div>
+    <div class="col">
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Enter keywords" id="query-input" value="soil">
+        <div class="input-group-append">
+          <button class="btn btn-dark" type="button" id="search-button">Search</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-1">
+      <img src="lib/loading.gif" width="24" height="24" id="loading-indicator">
+    </div>
+    <div class="col-2" id="total-hits">
+    </div>
+  </div>
+  <div class="row">
+    <div class="col" style="text-align: center; padding-top:20px;">
+      <h3>Stats</sup></h3>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h5>platform</h5>
+      <ul id="platform-distribution"></ul>
+    </div>
+    <div class="col">
+      <h5>strategy</h5>
+      <ul id="strategy-distribution"></ul>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col" style="text-align: center; padding-top:10px;">
+      <h3>Results <sup id="result-count"></sup></h3>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <table class="table">
+        <thead>
+        <tr>
+          <td>submission</td>
+          <td>keywords</td>
+          <td>samples</td>
+          <td>runs</td>
+        </tr>
+        </thead>
+        <tbody id="submissions-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript" src="lib/jquery-3.4.1.min.js"></script>
+<script type="text/javascript" src="lib/elasticsearch.jquery.min.js"></script>
+<script type="text/javascript" src="main.js"></script>
+</body>
+</html>
