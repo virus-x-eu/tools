@@ -4,6 +4,8 @@ $(document).ready(function () {
   });
   const default_page_size = 50;
 
+  const nf = new Intl.NumberFormat('en-US');
+
   $('#loading-indicator').hide();
 
   $('#search-button').click(function () {
@@ -24,21 +26,25 @@ $(document).ready(function () {
   });
 
   function generate_search(user_search_text, page_size) {
+    let query = {
+      multi_match: {
+        query: user_search_text,
+        operator: "and",
+        type: "cross_fields",
+        fields: [
+          'id',
+          'sample1.*',
+          'experiment1.*'
+        ],
+      }
+    };
+    if (user_search_text === "") {
+      query = {match_all: {}}
+    }
     return {
       index: 'submission',
       body: {
-        query: {
-          multi_match: {
-            query: user_search_text,
-            operator: "and",
-            type: "cross_fields",
-            fields: [
-              'id',
-              'sample1.*',
-              'experiment1.*'
-            ],
-          }
-        },
+        query: query,
         highlight: {
           fields: {
             "*": {}
@@ -82,19 +88,19 @@ $(document).ready(function () {
 
     update_worldmap(response);
 
-    $('#total-hits').text('' + response.hits.total.value + ' hits in ' + response.took + 'ms');
-    $('#result-count').text('(' + response.hits.total.value + ')');
+    $('#total-hits').text('' + nf.format(response.hits.total.value) + ' hits in ' + response.took + 'ms');
+    $('#result-count').text('(' + nf.format(response.hits.total.value) + ')');
 
     update_table(response);
 
     for (k of ['platform', 'strategy', 'layout', 'library_source']) {
       $('#' + k + '-distribution').empty();
       for (const kx of response.aggregations[k].buckets) {
-        $('#' + k + '-distribution').append('<li>' + kx.key + ' <b>(' + kx.doc_count + ')</b></li>');
+        $('#' + k + '-distribution').append('<li>' + kx.key + ' <b>(' + nf.format(kx.doc_count) + ')</b></li>');
       }
     }
 
-    $('#export-count').text(response.hits.total.value);
+    $('#export-count').text(nf.format(response.hits.total.value));
   }
 
   async function scroll_page() {
@@ -110,7 +116,7 @@ $(document).ready(function () {
 
   function update_table(response) {
     $('#page-indicator').empty();
-    $('#page-indicator').append('' + ((window.scroll_page - 1) * default_page_size + 1) + ' to ' + ((response.hits.total.value < default_page_size || ((window.scroll_page * default_page_size) > response.hits.total.value)) ? response.hits.total.value : (window.scroll_page * default_page_size)) + ' of ' + response.hits.total.value);
+    $('#page-indicator').append('' + ((window.scroll_page - 1) * default_page_size + 1) + ' to ' + ((response.hits.total.value < default_page_size || ((window.scroll_page * default_page_size) > response.hits.total.value)) ? nf.format(response.hits.total.value) : nf.format(window.scroll_page * default_page_size)) + ' of ' + nf.format(response.hits.total.value));
     $('#submissions-table').empty();
     for (const hit of response.hits.hits) {
       let highlights = "";
