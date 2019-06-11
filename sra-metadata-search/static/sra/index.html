@@ -15,6 +15,12 @@
       background-color: #6d718e;
       font-size: 10pt;
     }
+
+    #worldmap {
+      -webkit-box-shadow: 0px 0px 16px 0px rgba(0,0,0,0.4);
+      -moz-box-shadow: 0px 0px 16px 0px rgba(0,0,0,0.4);
+      box-shadow: 0px 0px 16px 0px rgba(0,0,0,0.4);
+    }
   </style>
 </head>
 <body>
@@ -29,7 +35,7 @@
     </div>
     <div class="col">
       <div class="input-group mb-3">
-        <input type="text" class="form-control" placeholder="Enter keywords" id="query-input" value="soil">
+        <input type="text" class="form-control" placeholder="Enter keywords" id="query-input" value="">
         <div class="input-group-append">
           <button class="btn btn-dark" type="button" id="search-button">Search</button>
         </div>
@@ -39,6 +45,11 @@
       <img src="lib/loading.gif" width="24" height="24" id="loading-indicator">
     </div>
     <div class="col-2" id="total-hits">
+    </div>
+  </div>
+  <div class="row">
+    <div class="col" style="text-align: center">
+      <canvas id="worldmap" width="1024" height="500"></canvas>
     </div>
   </div>
   <div class="row">
@@ -85,10 +96,10 @@
           </td>
         </tr>
         <tr>
-          <td>submission</td>
+          <td style="width: 15%">submission</td>
           <td>keywords</td>
-          <td>samples</td>
-          <td>runs</td>
+          <td style="width: 10%">samples</td>
+          <td style="width: 10%">runs</td>
         </tr>
         </thead>
         <tbody id="submissions-table"></tbody>

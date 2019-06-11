@@ -1,8 +1,8 @@
 $(document).ready(function () {
   const client = new $.es.Client({
-    hosts: 'localhost'
+    hosts: 'localhost:' + window.location.port
   });
-  const default_page_size = 100;
+  const default_page_size = 50;
 
   $('#loading-indicator').hide();
 
@@ -31,7 +31,9 @@ $(document).ready(function () {
           multi_match: {
             query: user_search_text,
             operator: "and",
+            type: "cross_fields",
             fields: [
+              'id',
               'sample1.*',
               'experiment1.*'
             ],
@@ -54,12 +56,19 @@ $(document).ready(function () {
           },
           library_source: {
             terms: {field: "experiment1.library_source.keyword"}
+          },
+          worldmap: {
+            geotile_grid: {
+              field: "sample1_location",
+              precision: 8,
+              size: 10000
+            },
           }
         }
       },
       size: page_size,
-      _source: ['sample_count', 'run_count'],
-      scroll: '1h',
+      _source: ['sample_count', 'run_count', 'experiment1_title', 'sample1_title'],
+      scroll: '20m',
     };
   }
 
@@ -70,6 +79,8 @@ $(document).ready(function () {
     window.scroll_id = response._scroll_id;
     window.scroll_page = 1;
     window.total = response.hits.total.value;
+
+    update_worldmap(response);
 
     $('#total-hits').text('' + response.hits.total.value + ' hits in ' + response.took + 'ms');
     $('#result-count').text('(' + response.hits.total.value + ')');
@@ -90,7 +101,7 @@ $(document).ready(function () {
     $('#loading-indicator').show();
     const response = await client.scroll({
       scrollId: window.scroll_id,
-      scroll: '1h'
+      scroll: '10m'
     });
     $('#loading-indicator').hide();
     window.scroll_page += 1;
@@ -112,7 +123,12 @@ $(document).ready(function () {
       }
       const st = $('#submissions-table');
       st.append('<tr>');
-      st.append('<td style="font-family: monospace">' + hit._id + '</td>');
+      st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63">' + hit._id + '</td>');
+      st.append('<td colspan="3" style="font-size: 0.8em;font-weight:bold;border-bottom: 1px solid #3e4a63">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
+      st.append('</tr>');
+
+      st.append('<tr>');
+      st.append('<td></td>');
       st.append('<td>' + highlights + '</td>');
       st.append('<td style="font-family: monospace">' + (hit._source.sample_count ? hit._source.sample_count : '-') + '</td>');
       st.append('<td style="font-family: monospace">' + (hit._source.run_count ? hit._source.run_count : '-') + '</td>');
@@ -152,4 +168,43 @@ $(document).ready(function () {
     $('#download-submission-ids').attr('href', (window.URL || window.webkitURL).createObjectURL(blob));
     $('#download-submission-ids')[0].click();
   }
+
+  function update_worldmap(response) {
+    const colors = ['#fc8d59', '#ef6548', '#d7301f', '#b30000', '#7f0000', '#9f0000', '#af0000', '#cf0000', '#ef0000', '#ff0000'];
+    const canvas = document.getElementById('worldmap');
+    const top_crop = 190;
+    if (canvas.getContext) {
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = function () {
+        const w = img.width;
+        const h = img.height;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, w, h);
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.drawImage(img, 0, -top_crop);
+        ctx.restore();
+        if (response) {
+          data = response.aggregations.worldmap.buckets;
+          if (data.length > 0) {
+            const color_step = data[0]['doc_count'] / colors.length;
+            for (const area of data) {
+              const pos = area['key'].split('/');
+              const zoom = parseInt(pos[0]);
+              const row_tiles = 2 ** zoom;
+              const x = parseInt(pos[1]);
+              const y = parseInt(pos[2]);
+              ctx.fillStyle = colors[Math.round(area['doc_count'] / color_step) - 1] + 'bb';
+              ctx.fillRect((w / row_tiles) * x, (h / row_tiles) * y - top_crop, w / row_tiles, h / row_tiles);
+            }
+          }
+        }
+      };
+      img.src = 'lib/worldmap.png';
+    } else {
+    }
+  }
+
+  update_worldmap();
 });

@@ -32,16 +32,47 @@ def clean(val):
   return val.lower().replace(' ', '_')
 
 
-def parse_first_sample(doc):
-  # use only first sample because their attributes are usually almost identical
-  sample_xml = doc.find('SAMPLE')
+def retrieve_value_for_key(sample_xml, key):
+  hits = sample_xml.xpath(
+    '(//SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE/TAG[text()="' + key + '"]/following-sibling::VALUE/text())[1]')
+  if len(hits) > 0:
+    return hits[0]
+  return None
+
+
+def find_coordinate(sample_xml, axis):
+  source1 = retrieve_value_for_key(sample_xml, 'lat_lon')
+  if source1:
+    m = re.search(r'([0-9.]+ [NS]) ([0-9.]+ [WE])', source1)
+    if m:
+      if axis == 'lat':
+        coord = m.group(1).split(' ')
+        try:
+          if coord[1] == 'S':
+            return float(coord[0]) * -1
+          else:
+            return float(coord[0])
+        except ValueError:
+          return None
+      elif axis == 'lon':
+        coord = m.group(2).split(' ')
+        try:
+          if coord[1] == 'W':
+            return float(coord[0]) * -1
+          else:
+            return float(coord[0])
+        except ValueError:
+          return None
+
+
+def parse_sample(sample_xml):
   return {
     'title': sample_xml.findtext('TITLE') or '',
     'id': sample_xml.findall('IDENTIFIERS')[0].findtext('PRIMARY_ID') or '',
     'taxonid': sample_xml.findall('SAMPLE_NAME')[0].findtext('TAXON_ID') or '',
     'scientificname': sample_xml.findall('SAMPLE_NAME')[0].findtext('SCIENTIFIC_NAME') or '',
     'attributes': [{'tag': clean(a.findtext('TAG')), 'value': a.findtext('VALUE')} for a in
-                   sample_xml.findall('SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE')]
+                   sample_xml.findall('SAMPLE_ATTRIBUTES/SAMPLE_ATTRIBUTE')],
   }
 
 
@@ -74,14 +105,27 @@ if __name__ == '__main__':
             submissions[submission_id] = {"id": submission_id}
           root = etree.XML(tar.extractfile(item).read())
           if filetype == 'experiment':
-            submissions[submission_id]['experiment1'] = parse_first_experiment(root)
-            pass
+            experiment1 = parse_first_experiment(root)
+            submissions[submission_id]['experiment1'] = experiment1
+            if 'title' in experiment1:
+              submissions[submission_id]['experiment1_title'] = experiment1['title']
           elif filetype == 'run':
             submissions[submission_id]['run_count'] = root.xpath('count(//RUN)')
             pass
           elif filetype == 'sample':
-            submissions[submission_id]['sample1'] = parse_first_sample(root)
+            # use only first sample because their attributes are usually almost identical
+            sample_xml = root.find('SAMPLE')
+            sample1 = parse_sample(sample_xml)
+            submissions[submission_id]['sample1'] = sample1
+            if 'title' in sample1:
+              submissions[submission_id]['sample1_title'] = sample1['title']
+            if 'collection_date' in sample1:
+              submissions[submission_id]['sample1_title'] = sample1['title']
             submissions[submission_id]['sample_count'] = root.xpath('count(//SAMPLE)')
+            lat = find_coordinate(sample_xml, 'lat')
+            lon = find_coordinate(sample_xml, 'lon')
+            if lat and lon:
+              submissions[submission_id]['sample1_location'] = {'lat': lat, 'lon': lon}
           elif filetype == 'study':
             pass
           elif filetype == 'submission':

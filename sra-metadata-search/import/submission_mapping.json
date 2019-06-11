@@ -13,6 +13,9 @@
   },
   "mappings": {
     "properties": {
+      "sample1_location": {
+        "type": "geo_point"
+      }
     },
     "date_detection": false
   }

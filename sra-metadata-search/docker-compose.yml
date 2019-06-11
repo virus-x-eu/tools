@@ -18,8 +18,10 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.1.1
     environment:
       - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
-      - "discovery.type=single-node"
       - "indices.query.bool.max_clause_count=4096"
+      - "cluster.name=sra-metadata-search"
+      - "node.name=sra-metadata-search-node1"
+      - "discovery.seed_hosts=127.0.0.1, [::1]"
     ulimits:
       memlock:
         soft: -1
