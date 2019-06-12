@@ -110,7 +110,7 @@ if __name__ == '__main__':
             if 'title' in experiment1:
               submissions[submission_id]['experiment1_title'] = experiment1['title']
           elif filetype == 'run':
-            submissions[submission_id]['run_count'] = root.xpath('count(//RUN)')
+            submissions[submission_id]['run_count'] = int(root.xpath('count(//RUN)'))
             pass
           elif filetype == 'sample':
             # use only first sample because their attributes are usually almost identical
@@ -119,11 +119,14 @@ if __name__ == '__main__':
             submissions[submission_id]['sample1'] = sample1
             if 'title' in sample1:
               submissions[submission_id]['sample1_title'] = sample1['title']
-            submissions[submission_id]['sample_count'] = root.xpath('count(//SAMPLE)')
+            submissions[submission_id]['sample_count'] = int(root.xpath('count(//SAMPLE)'))
             lat = find_coordinate(sample_xml, 'lat')
             lon = find_coordinate(sample_xml, 'lon')
             if lat and lon:
               submissions[submission_id]['sample1_location'] = {'lat': lat, 'lon': lon}
+            for attr in sample1['attributes']:
+              if attr['tag'] == clean('INSDC first public') or attr['tag'] == clean('ENA-FIRST-PUBLIC'):
+                submissions[submission_id]['sample1_date'] = attr['value']
           elif filetype == 'study':
             pass
           elif filetype == 'submission':

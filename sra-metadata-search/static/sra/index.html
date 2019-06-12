@@ -14,6 +14,7 @@
       color: #eee;
       background-color: #6d718e;
       font-size: 10pt;
+      font-family: sans-serif;
     }
 
     #worldmap {
@@ -32,6 +33,45 @@
 
     input[type="search"]::-webkit-search-cancel-button {
       -webkit-appearance: searchfield-cancel-button;
+    }
+
+
+    .chart {
+      display: table;
+      table-layout: fixed;
+      width: 100%;
+      max-width: 900px;
+      height: 100px;
+      margin: 0 auto;
+      background-image: linear-gradient(to top, rgba(255, 255, 255, 0.2) 5%, rgba(0, 0, 0, 0) 5%);
+      background-size: 100% 25px;
+      background-position: left top;
+      margin-bottom: 50px;
+    }
+
+    .chart li {
+      position: relative;
+      display: table-cell;
+      vertical-align: bottom;
+      height: 100px;
+    }
+
+    .chart span {
+      margin: 0 .5em;
+      display: block;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .chart span:before {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      padding: 5px 1em 0;
+      display: block;
+      text-align: center;
+      content: attr(title);
+      word-wrap: break-word;
     }
   </style>
 </head>
@@ -66,8 +106,12 @@
   </div>
   <div class="row">
     <div class="col" style="text-align: center; padding-top:20px;">
-      <h3>Stats</sup></h3>
+      <h3>Stats</h3>
     </div>
+  </div>
+  <div class="row">
+    <ul class="chart" id="date-chart">
+    </ul>
   </div>
   <div class="row">
     <div class="col">

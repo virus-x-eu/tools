@@ -75,11 +75,17 @@ $(document).ready(function () {
             sum: {
               field: "run_count"
             }
+          },
+          date: {
+            date_histogram: {
+              field: "sample1_date",
+              interval: "year"
+            }
           }
         }
       },
       size: page_size,
-      _source: ['sample_count', 'run_count', 'experiment1_title', 'sample1_title'],
+      _source: ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'sample1_date'],
       scroll: '20m',
     };
   }
@@ -94,7 +100,8 @@ $(document).ready(function () {
 
     update_worldmap(response);
 
-    $('#total-hits').text('' + nf.format(response.hits.total.value) + ' hits in ' + response.took + 'ms');
+    $('#total-hits').empty();
+    $('#total-hits').append('<b>' + nf.format(response.hits.total.value) + ' hits</b> in ' + response.took + 'ms');
     $('#result-count').text('(' + nf.format(response.hits.total.value) + ')');
 
     update_table(response);
@@ -110,6 +117,20 @@ $(document).ready(function () {
     $('#export-button').show();
     $('#run-count').empty();
     $('#run-count').append('<div style="font-size:0.8em">Total runs: </div>' + nf.format(response.aggregations.run_count.value));
+
+    const data = response.aggregations.date.buckets;
+    let max = 0;
+    for (const date of data) {
+      if (date.doc_count > max) {
+        max = date.doc_count;
+      }
+    }
+    $('#date-chart').empty();
+    for (const date of data) {
+      const label = date.key_as_string.substring(0, 4);
+      const p = (date.doc_count / max) * 100;
+      $('#date-chart').append('<li><span style="height:' + p + '%" title="' + label + '"></span></li>');
+    }
   }
 
   async function scroll_page() {
@@ -132,14 +153,14 @@ $(document).ready(function () {
       if ('highlight' in hit) {
         for (const field of Object.keys(hit.highlight)) {
           for (const match of hit.highlight[field]) {
-            highlights += '<div style="margin-bottom: 10px;"><span>' + match + '</span> <sup style="opacity: 0.5">' + field + '</sup></div>';
+            highlights += '<div style="margin-bottom: 10px;"><span>' + match + '</span> <span style="opacity: 0.5;font-size:75%">' + field + '</span></div>';
           }
         }
       }
       const st = $('#submissions-table');
       st.append('<tr>');
       st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63">' + hit._id + '</td>');
-      st.append('<td colspan="3" class="hide-bottomline" style="font-size: 0.8em;font-weight:bold">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
+      st.append('<td colspan="4" class="hide-bottomline" style="font-size: 0.8em;font-weight:bold">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
       st.append('</tr>');
 
       st.append('<tr>');

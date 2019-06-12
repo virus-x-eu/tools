@@ -15,6 +15,9 @@
     "properties": {
       "sample1_location": {
         "type": "geo_point"
+      },
+      "sample1_date": {
+        "type": "date"
       }
     },
     "date_detection": false
