@@ -6,6 +6,10 @@ from lxml import etree
 import re
 import json
 import gzip
+from datetime import datetime
+import locale
+
+locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
 parser = argparse.ArgumentParser(description='''
 Generate Elasticsearch JSON using NCBI SRA Metadata XML files inside a tar archive.
@@ -30,6 +34,40 @@ def write_output():
 
 def clean(val):
   return val.lower().replace(' ', '_')
+
+
+date_patterns = [
+  '%Y-%m-%d',
+  '%m/%d/%Y',
+  '%d-%b-%Y',
+  '%d-%B-%Y',
+  '%d. %b %Y',
+  '%d. %B %Y',
+  '%d-%m-%Y',
+  '%d.%m.%Y',
+  '%d-%b-%y',
+  '%d-%B-%y',
+  '%d. %b %y',
+  '%d. %B %y',
+  '%d.%m.%y',
+  '%Y',
+  '%b %Y',
+  '%B %Y',
+  '%b-%Y',
+  '%B-%Y',
+  '%m.%Y',
+  '%m %Y',
+  '%m-%Y',
+]
+
+
+def parse_date(datestr):
+  for p in date_patterns:
+    try:
+      return datetime.strptime(datestr, p).date()
+    except ValueError:
+      pass
+  return None
 
 
 def retrieve_value_for_key(sample_xml, key):
@@ -111,7 +149,6 @@ if __name__ == '__main__':
               submissions[submission_id]['experiment1_title'] = experiment1['title']
           elif filetype == 'run':
             submissions[submission_id]['run_count'] = int(root.xpath('count(//RUN)'))
-            pass
           elif filetype == 'sample':
             # use only first sample because their attributes are usually almost identical
             sample_xml = root.find('SAMPLE')
@@ -126,7 +163,12 @@ if __name__ == '__main__':
               submissions[submission_id]['sample1_location'] = {'lat': lat, 'lon': lon}
             for attr in sample1['attributes']:
               if attr['tag'] == clean('INSDC first public') or attr['tag'] == clean('ENA-FIRST-PUBLIC'):
-                submissions[submission_id]['sample1_date'] = attr['value']
+                submissions[submission_id]['date'] = attr['value']
+              if attr['tag'] in ['collection_date', 'sampling_date', 'run_date'] \
+                      and 'date' not in submissions[submission_id]:
+                date = parse_date(attr['value'])
+                if date:
+                  submissions[submission_id]['date'] = str(date)
           elif filetype == 'study':
             pass
           elif filetype == 'submission':

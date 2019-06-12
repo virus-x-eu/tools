@@ -78,14 +78,14 @@ $(document).ready(function () {
           },
           date: {
             date_histogram: {
-              field: "sample1_date",
-              interval: "year"
+              field: "date",
+              interval: "year",
             }
           }
         }
       },
       size: page_size,
-      _source: ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'sample1_date'],
+      _source: ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'date'],
       scroll: '20m',
     };
   }
@@ -128,8 +128,10 @@ $(document).ready(function () {
     $('#date-chart').empty();
     for (const date of data) {
       const label = date.key_as_string.substring(0, 4);
-      const p = (date.doc_count / max) * 100;
-      $('#date-chart').append('<li><span style="height:' + p + '%" title="' + label + '"></span></li>');
+      if (parseInt(label) > 2000) {
+        const p = (date.doc_count / max) * 100;
+        $('#date-chart').append('<li><span style="height:' + p + '%" title="' + label + '"></span></li>');
+      }
     }
   }
 

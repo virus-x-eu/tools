@@ -16,7 +16,7 @@
       "sample1_location": {
         "type": "geo_point"
       },
-      "sample1_date": {
+      "date": {
         "type": "date"
       }
     },
