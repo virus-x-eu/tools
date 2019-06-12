@@ -119,8 +119,6 @@ if __name__ == '__main__':
             submissions[submission_id]['sample1'] = sample1
             if 'title' in sample1:
               submissions[submission_id]['sample1_title'] = sample1['title']
-            if 'collection_date' in sample1:
-              submissions[submission_id]['sample1_title'] = sample1['title']
             submissions[submission_id]['sample_count'] = root.xpath('count(//SAMPLE)')
             lat = find_coordinate(sample_xml, 'lat')
             lon = find_coordinate(sample_xml, 'lon')
