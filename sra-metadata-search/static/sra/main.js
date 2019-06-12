@@ -7,6 +7,7 @@ $(document).ready(function () {
   const nf = new Intl.NumberFormat('en-US');
 
   $('#loading-indicator').hide();
+  $('#query-input').focus();
 
   $('#search-button').click(function () {
     run_search();
@@ -69,6 +70,11 @@ $(document).ready(function () {
               precision: 8,
               size: 10000
             },
+          },
+          run_count: {
+            sum: {
+              field: "run_count"
+            }
           }
         }
       },
@@ -99,8 +105,11 @@ $(document).ready(function () {
         $('#' + k + '-distribution').append('<li>' + kx.key + ' <b>(' + nf.format(kx.doc_count) + ')</b></li>');
       }
     }
-
-    $('#export-count').text(nf.format(response.hits.total.value));
+    $('#submission-count').empty();
+    $('#submission-count').append('<div style="font-size:0.8em">Total submissions:</div>' + nf.format(response.hits.total.value));
+    $('#export-button').show();
+    $('#run-count').empty();
+    $('#run-count').append('<div style="font-size:0.8em">Total runs: </div>' + nf.format(response.aggregations.run_count.value));
   }
 
   async function scroll_page() {
@@ -130,7 +139,7 @@ $(document).ready(function () {
       const st = $('#submissions-table');
       st.append('<tr>');
       st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63">' + hit._id + '</td>');
-      st.append('<td colspan="3" style="font-size: 0.8em;font-weight:bold;border-bottom: 1px solid #3e4a63">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
+      st.append('<td colspan="3" class="hide-bottomline" style="font-size: 0.8em;font-weight:bold">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
       st.append('</tr>');
 
       st.append('<tr>');

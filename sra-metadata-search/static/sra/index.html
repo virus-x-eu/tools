@@ -17,9 +17,21 @@
     }
 
     #worldmap {
-      -webkit-box-shadow: 0px 0px 16px 0px rgba(0,0,0,0.4);
-      -moz-box-shadow: 0px 0px 16px 0px rgba(0,0,0,0.4);
-      box-shadow: 0px 0px 16px 0px rgba(0,0,0,0.4);
+      -webkit-box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.4);
+      -moz-box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.4);
+      box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.4);
+    }
+
+    td.hide-topline {
+      border-top: 1px solid #3e4a63;
+    }
+
+    td.hide-bottomline {
+      border-bottom: 1px solid #3e4a63;
+    }
+
+    input[type="search"]::-webkit-search-cancel-button {
+      -webkit-appearance: searchfield-cancel-button;
     }
   </style>
 </head>
@@ -35,7 +47,7 @@
     </div>
     <div class="col">
       <div class="input-group mb-3">
-        <input type="text" class="form-control" placeholder="Enter keywords" id="query-input" value="">
+        <input type="search" class="form-control" placeholder="Enter keywords" id="query-input" value="">
         <div class="input-group-append">
           <button class="btn btn-dark" type="button" id="search-button">Search</button>
         </div>
@@ -88,12 +100,17 @@
         <thead>
         <tr>
           <td>
-            <button class="btn btn-sm btn-dark" type="button" id="export-button">
-              export <span id="export-count"></span> IDs
+            <span id="submission-count"></span>
+            <button class="btn btn-sm btn-dark" type="button" id="export-button" style="display: none;margin-top:5px;">
+              export IDs
             </button>
             <a id="download-submission-ids" style="display: none"
                download="submissions.list">Download</a>
           </td>
+          <td class="hide-topline">
+          </td>
+          <td class="hide-topline"></td>
+          <td id="run-count"></td>
         </tr>
         <tr>
           <td style="width: 15%">submission</td>
