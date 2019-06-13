@@ -42,6 +42,10 @@ $(document).ready(function () {
     if (user_search_text === "") {
       query = {match_all: {}}
     }
+    let source = ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'date'];
+    if (page_size >= 200) {
+      source = false;
+    }
     return {
       index: 'submission',
       body: {
@@ -85,7 +89,7 @@ $(document).ready(function () {
         }
       },
       size: page_size,
-      _source: ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'date'],
+      _source: source,
       scroll: '20m',
     };
   }
@@ -176,7 +180,7 @@ $(document).ready(function () {
 
   async function export_submission_ids() {
     $('#loading-indicator').show();
-    const response = await client.search(generate_search($('#query-input').val(), 200));
+    const response = await client.search(generate_search($('#query-input').val(), 2000));
     const all_submission_ids = [];
     const response_queue = [];
 
@@ -202,7 +206,7 @@ $(document).ready(function () {
       );
     }
 
-    var blob = new Blob([all_submission_ids.join('\n')], {type: 'text/plain'});
+    var blob = new Blob([all_submission_ids.join('\n') + '\n'], {type: 'text/plain'});
     $('#download-submission-ids').attr('href', (window.URL || window.webkitURL).createObjectURL(blob));
     $('#download-submission-ids')[0].click();
   }
