@@ -206,7 +206,7 @@ $(document).ready(function () {
       );
     }
 
-    var blob = new Blob([all_submission_ids.join('\n') + '\n'], {type: 'text/plain'});
+    let blob = new Blob([all_submission_ids.join('\n') + '\n'], {type: 'text/plain'});
     $('#download-submission-ids').attr('href', (window.URL || window.webkitURL).createObjectURL(blob));
     $('#download-submission-ids')[0].click();
   }
@@ -228,7 +228,7 @@ $(document).ready(function () {
         ctx.drawImage(img, 0, -top_crop);
         ctx.restore();
         if (response) {
-          data = response.aggregations.worldmap.buckets;
+          const  data = response.aggregations.worldmap.buckets;
           if (data.length > 0) {
             const color_step = data[0]['doc_count'] / colors.length;
             for (const area of data) {
