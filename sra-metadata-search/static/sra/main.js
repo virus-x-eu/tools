@@ -128,7 +128,7 @@ $(document).ready(function () {
     $('#date-chart').empty();
     for (const date of data) {
       const label = date.key_as_string.substring(0, 4);
-      if (parseInt(label) > 2000) {
+      if (parseInt(label) > new Date().getFullYear() - 18 && parseInt(label) <= new Date().getFullYear()) {
         const p = (date.doc_count / max) * 100;
         $('#date-chart').append('<li><span style="height:' + p + '%" title="' + label + '"></span></li>');
       }
@@ -161,15 +161,15 @@ $(document).ready(function () {
       }
       const st = $('#submissions-table');
       st.append('<tr>');
-      st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63">' + hit._id + '</td>');
+      st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63;font-size: 14px">' + hit._id + '</td>');
       st.append('<td colspan="4" class="hide-bottomline" style="font-size: 0.8em;font-weight:bold">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
       st.append('</tr>');
 
       st.append('<tr>');
       st.append('<td></td>');
       st.append('<td>' + highlights + '</td>');
-      st.append('<td style="font-family: monospace">' + (hit._source.sample_count ? hit._source.sample_count : '-') + '</td>');
-      st.append('<td style="font-family: monospace">' + (hit._source.run_count ? hit._source.run_count : '-') + '</td>');
+      st.append('<td style="font-family: monospace;font-size: 14px">' + (hit._source.sample_count ? hit._source.sample_count : '-') + '</td>');
+      st.append('<td style="font-family: monospace;font-size: 14px">' + (hit._source.run_count ? hit._source.run_count : '-') + '</td>');
       st.append('</tr>');
     }
   }
