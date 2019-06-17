@@ -15,6 +15,8 @@ def extract_unique_element_from_contigid(contigid):
   elif re.search("NODE_[0-9]*_.*", contigid):
     parts = contigid.split("_", 3)
     return parts[1]
+  elif re.search("tig([0-9]{8})_.*", contigid):
+    return contigid[3:11]
   else:
     raise NotImplementedError('It looks like parsing for this type of contig ID has not been implemented yet!')
 
