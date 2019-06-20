@@ -9,6 +9,9 @@ mkdir data
 mkdir esdata
 chmod 777 esdata
 
+echo "vm.max_map_count=262144" | sudo tee /etc/sysctl.conf
+sudo sysctl -f
+
 # Convert metadata XML to JSON
 ./sra-metadata-to-json.py /tmp/NCBI_SRA_Metadata_Full_20190504.tar.gz data/submissions.gz
 
