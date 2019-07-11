@@ -106,7 +106,7 @@ def find_coordinate(sample_xml, axis):
 def parse_sample(sample_xml):
   return {
     'title': sample_xml.findtext('TITLE') or '',
-    'id': sample_xml.findall('IDENTIFIERS')[0].findtext('PRIMARY_ID') or '',
+    'id': sample_xml.findall('IDENTIFIERS')[0].findtext('PRIMARY_ID') or sample_xml.get('accession') or '',
     'taxonid': sample_xml.findall('SAMPLE_NAME')[0].findtext('TAXON_ID') or '',
     'scientificname': sample_xml.findall('SAMPLE_NAME')[0].findtext('SCIENTIFIC_NAME') or '',
     'attributes': [{'tag': clean(a.findtext('TAG')), 'value': a.findtext('VALUE')} for a in
@@ -120,6 +120,7 @@ def parse_first_experiment(doc):
   platform_xml = exp_xml.find('PLATFORM')
   design_description = exp_xml.xpath('//DESIGN/DESIGN_DESCRIPTION/text()')
   return {
+    'id': exp_xml.get('accession') or '',
     'title': exp_xml.findtext('TITLE') or '',
     'platform': str(list(platform_xml)[0].tag).lower() or '',
     'instrument_model': platform_xml[0].findtext('INSTRUMENT_MODEL') or '',
@@ -127,6 +128,17 @@ def parse_first_experiment(doc):
     'layout': exp_xml.xpath('name(//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_LAYOUT/*[1])').lower() or '',
     'library_source': exp_xml.xpath('//DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_SOURCE/text()')[0].lower() or '',
     'design_description': design_description[0] if len(design_description) > 0 else '',
+  }
+
+
+def parse_first_study(doc):
+  # use only first study because generally there is only one per file
+  study_xml = doc.find('STUDY')
+  return {
+    'id': study_xml.get('accession') or '',
+    'alias': study_xml.get('alias') or '',
+    'title': study_xml.xpath('DESCRIPTOR/STUDY_TITLE/text()') or '',
+    'abstract': study_xml.xpath('DESCRIPTOR/STUDY_ABSTRACT/text()') or '',
   }
 
 
@@ -170,7 +182,8 @@ if __name__ == '__main__':
                 if date:
                   submissions[submission_id]['date'] = str(date)
           elif filetype == 'study':
-            pass
+            study1 = parse_first_study(root)
+            submissions[submission_id]['study1'] = study1
           elif filetype == 'submission':
             pass
           elif filetype == 'analysis':
