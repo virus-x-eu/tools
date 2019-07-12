@@ -35,14 +35,15 @@ $(document).ready(function () {
         fields: [
           'id',
           'sample1.*',
-          'experiment1.*'
+          'experiment1.*',
+          'study1.*'
         ],
       }
     };
     if (user_search_text === "") {
       query = {match_all: {}}
     }
-    let source = ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'date'];
+    let source = ['sample_count', 'run_count', 'experiment1_title', 'sample1_title', 'study1_title', 'date'];
     if (page_size >= 200) {
       source = false;
     }
@@ -165,8 +166,8 @@ $(document).ready(function () {
       }
       const st = $('#submissions-table');
       st.append('<tr>');
-      st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63;font-size: 14px">' + hit._id + '</td>');
-      st.append('<td colspan="4" class="hide-bottomline" style="font-size: 0.8em;font-weight:bold">' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
+      st.append('<td style="font-family: monospace;border-bottom: 1px solid #3e4a63;font-size: 14px"><a href="https://www.ncbi.nlm.nih.gov/sra/?term=' + hit._id + '[Accession]" rel="noreferrer" rel="noopener" target="_blank">' + hit._id + '</a></td>');
+      st.append('<td colspan="4" class="hide-bottomline" style="font-size: 0.8em;font-weight:bold">' + (hit._source.study1_title ? hit._source.study1_title : '-') + '; ' + (hit._source.sample1_title ? hit._source.sample1_title : '-') + '; ' + (hit._source.experiment1_title ? hit._source.experiment1_title : '-') + '</td>');
       st.append('</tr>');
 
       st.append('<tr>');
@@ -228,7 +229,7 @@ $(document).ready(function () {
         ctx.drawImage(img, 0, -top_crop);
         ctx.restore();
         if (response) {
-          const  data = response.aggregations.worldmap.buckets;
+          const data = response.aggregations.worldmap.buckets;
           if (data.length > 0) {
             const color_step = data[0]['doc_count'] / colors.length;
             for (const area of data) {

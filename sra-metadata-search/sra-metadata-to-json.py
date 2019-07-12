@@ -22,16 +22,6 @@ args = parser.parse_args()
 submissions = {}
 
 
-def write_output():
-  with gzip.open(args.json_gz, 'wt') as gz:
-    for key in submissions:
-      header = {'index': {'_id': key}}
-      gz.write(json.dumps(header))
-      gz.write('\n')
-      gz.write(json.dumps(submissions[key], separators=(',', ':')))
-      gz.write('\n')
-
-
 def clean(val):
   return val.lower().replace(' ', '_')
 
@@ -137,58 +127,80 @@ def parse_first_study(doc):
   return {
     'id': study_xml.get('accession') or '',
     'alias': study_xml.get('alias') or '',
-    'title': study_xml.xpath('DESCRIPTOR/STUDY_TITLE/text()') or '',
-    'abstract': study_xml.xpath('DESCRIPTOR/STUDY_ABSTRACT/text()') or '',
+    'title': first_element(study_xml.xpath('DESCRIPTOR/STUDY_TITLE/text()')) or '',
+    'abstract': first_element(study_xml.xpath('DESCRIPTOR/STUDY_ABSTRACT/text()')) or '',
   }
 
 
+def first_element(l):
+  if len(l) > 0:
+    return l[0]
+  else:
+    return ''
+
+
 if __name__ == '__main__':
-  with tarfile.open(args.metadata_tar_gz, 'r') as tar:
+  submission_count = 1
+  prev_submission_id = ""
+  with tarfile.open(args.metadata_tar_gz, 'r') as tar, gzip.open(args.json_gz, 'wt') as gz:
     for item in tar:
       if item.isfile:
         m = re.search(r'\w+/(\w+)\.(\w+)\.xml', item.name)
         if m:
           submission_id = m.group(1)
+          if prev_submission_id == "":
+            submission = {"id": submission_id}
+          if submission_id != prev_submission_id and prev_submission_id != "":
+            # write previous submission data
+            header = {'index': {'_id': submission['id']}}
+            gz.write(json.dumps(header))
+            gz.write('\n')
+            gz.write(json.dumps(submission, separators=(',', ':')))
+            gz.write('\n')
+            # create object for current submission
+            submission = {"id": submission_id}
+            submission_count += 1
+            if submission_count % 1000 == 0:
+              print(submission_count)
+          prev_submission_id = submission_id
           filetype = m.group(2)
           # print('Parsing submission "%s" (type "%s")' % (submission_id, filetype))
-          if submission_id not in submissions:
-            submissions[submission_id] = {"id": submission_id}
           root = etree.XML(tar.extractfile(item).read())
           if filetype == 'experiment':
             experiment1 = parse_first_experiment(root)
-            submissions[submission_id]['experiment1'] = experiment1
+            submission['experiment1'] = experiment1
             if 'title' in experiment1:
-              submissions[submission_id]['experiment1_title'] = experiment1['title']
+              submission['experiment1_title'] = experiment1['title']
           elif filetype == 'run':
-            submissions[submission_id]['run_count'] = int(root.xpath('count(//RUN)'))
+            submission['run_count'] = int(root.xpath('count(//RUN)'))
           elif filetype == 'sample':
             # use only first sample because their attributes are usually almost identical
             sample_xml = root.find('SAMPLE')
             sample1 = parse_sample(sample_xml)
-            submissions[submission_id]['sample1'] = sample1
+            submission['sample1'] = sample1
             if 'title' in sample1:
-              submissions[submission_id]['sample1_title'] = sample1['title']
-            submissions[submission_id]['sample_count'] = int(root.xpath('count(//SAMPLE)'))
+              submission['sample1_title'] = sample1['title']
+            submission['sample_count'] = int(root.xpath('count(//SAMPLE)'))
             lat = find_coordinate(sample_xml, 'lat')
             lon = find_coordinate(sample_xml, 'lon')
             if lat and lon:
-              submissions[submission_id]['sample1_location'] = {'lat': lat, 'lon': lon}
+              submission['sample1_location'] = {'lat': lat, 'lon': lon}
             for attr in sample1['attributes']:
               if attr['tag'] == clean('INSDC first public') or attr['tag'] == clean('ENA-FIRST-PUBLIC'):
-                submissions[submission_id]['date'] = attr['value']
+                submission['date'] = attr['value']
               if attr['tag'] in ['collection_date', 'sampling_date', 'run_date'] \
-                      and 'date' not in submissions[submission_id]:
+                      and 'date' not in submission:
                 date = parse_date(attr['value'])
                 if date:
-                  submissions[submission_id]['date'] = str(date)
+                  submission['date'] = str(date)
           elif filetype == 'study':
             study1 = parse_first_study(root)
-            submissions[submission_id]['study1'] = study1
+            submission['study1'] = study1
+            if 'title' in study1:
+              submission['study1_title'] = study1['title']
           elif filetype == 'submission':
             pass
           elif filetype == 'analysis':
             pass
           else:
             print('Unknown type: %s' % filetype)
-
-  write_output()
