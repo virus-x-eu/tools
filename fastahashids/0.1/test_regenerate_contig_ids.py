@@ -24,6 +24,10 @@ class TestSum(unittest.TestCase):
     new_id = script.extract_unique_element_from_contigid("NODE_20532_length_1001_cov_1.171247")
     self.assertEqual(new_id, "20532")
 
+  def test_pilon(self):
+    new_id = script.extract_unique_element_from_contigid("contig_2795_pilon")
+    self.assertEqual(new_id, "2795")
+
   def test_some_other_assembler_id(self):
     try:
       script.extract_unique_element_from_contigid("OTHER_ASSEMBLER_123445")
