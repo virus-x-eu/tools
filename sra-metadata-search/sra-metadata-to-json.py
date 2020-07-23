@@ -52,6 +52,8 @@ date_patterns = [
 
 
 def parse_date(datestr):
+  if not isinstance(datestr, str):
+    return None
   for p in date_patterns:
     try:
       return datetime.strptime(datestr, p).date()
