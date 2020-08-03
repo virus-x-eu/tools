@@ -36,8 +36,7 @@ with open(args.input_fasta, 'rU') as sourceFile:
         old_id = record.id
         old_contig_id = '_'.join(old_id.split('_')[:-1])
         gene_suffix = old_id.split('_')[-1]
-        old_contig_id_hash = hash(old_contig_id)
-        new_id = args.dataset_name + '_' + nucl_hash[-6:] + '_' + old_contig_id_hash[-4:] + '_' + gene_suffix
+        new_id = args.dataset_name + '_' + nucl_hash[-6:] + '_' + old_contig_id + '_' + gene_suffix
         record.id = new_id
         rest_of_description = record.description.split(' ')[1:]
         record.description = new_id + ' ' + ' '.join(rest_of_description)
