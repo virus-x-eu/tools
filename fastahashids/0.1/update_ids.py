@@ -27,7 +27,7 @@ with open(args.input_mapping, 'r') as mapping:
     mapping_args = line.strip().split('\t')
     map[mapping_args[0]] = mapping_args[1]
 
-with open(args.input_fasta, 'rU') as sourceFile:
+with open(args.input_fasta, 'r') as sourceFile:
   with open(args.output_fasta, 'w') as destFile:
     dest = FastaIO.FastaWriter(destFile, wrap=None)
     dest.write_header()

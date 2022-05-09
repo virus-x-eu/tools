@@ -167,42 +167,45 @@ if __name__ == '__main__':
           prev_submission_id = submission_id
           filetype = m.group(2)
           # print('Parsing submission "%s" (type "%s")' % (submission_id, filetype))
-          root = etree.XML(tar.extractfile(item).read())
-          if filetype == 'experiment':
-            experiment1 = parse_first_experiment(root)
-            submission['experiment1'] = experiment1
-            if 'title' in experiment1:
-              submission['experiment1_title'] = experiment1['title']
-          elif filetype == 'run':
-            submission['run_count'] = int(root.xpath('count(//RUN)'))
-          elif filetype == 'sample':
-            # use only first sample because their attributes are usually almost identical
-            sample_xml = root.find('SAMPLE')
-            sample1 = parse_sample(sample_xml)
-            submission['sample1'] = sample1
-            if 'title' in sample1:
-              submission['sample1_title'] = sample1['title']
-            submission['sample_count'] = int(root.xpath('count(//SAMPLE)'))
-            lat = find_coordinate(sample_xml, 'lat')
-            lon = find_coordinate(sample_xml, 'lon')
-            if lat and lon:
-              submission['sample1_location'] = {'lat': lat, 'lon': lon}
-            for attr in sample1['attributes']:
-              if attr['tag'] == clean('INSDC first public') or attr['tag'] == clean('ENA-FIRST-PUBLIC'):
-                submission['date'] = attr['value']
-              if attr['tag'] in ['collection_date', 'sampling_date', 'run_date'] \
-                      and 'date' not in submission:
-                date = parse_date(attr['value'])
-                if date:
-                  submission['date'] = str(date)
-          elif filetype == 'study':
-            study1 = parse_first_study(root)
-            submission['study1'] = study1
-            if 'title' in study1:
-              submission['study1_title'] = study1['title']
-          elif filetype == 'submission':
-            pass
-          elif filetype == 'analysis':
-            pass
-          else:
-            print('Unknown type: %s' % filetype)
+          try:
+            root = etree.XML(tar.extractfile(item).read())
+            if filetype == 'experiment':
+              experiment1 = parse_first_experiment(root)
+              submission['experiment1'] = experiment1
+              if 'title' in experiment1:
+                submission['experiment1_title'] = experiment1['title']
+            elif filetype == 'run':
+              submission['run_count'] = int(root.xpath('count(//RUN)'))
+            elif filetype == 'sample':
+              # use only first sample because their attributes are usually almost identical
+              sample_xml = root.find('SAMPLE')
+              sample1 = parse_sample(sample_xml)
+              submission['sample1'] = sample1
+              if 'title' in sample1:
+                submission['sample1_title'] = sample1['title']
+              submission['sample_count'] = int(root.xpath('count(//SAMPLE)'))
+              lat = find_coordinate(sample_xml, 'lat')
+              lon = find_coordinate(sample_xml, 'lon')
+              if lat and lon:
+                submission['sample1_location'] = {'lat': lat, 'lon': lon}
+              for attr in sample1['attributes']:
+                if attr['tag'] == clean('INSDC first public') or attr['tag'] == clean('ENA-FIRST-PUBLIC'):
+                  submission['date'] = attr['value']
+                if attr['tag'] in ['collection_date', 'sampling_date', 'run_date'] \
+                        and 'date' not in submission:
+                  date = parse_date(attr['value'])
+                  if date:
+                    submission['date'] = str(date)
+            elif filetype == 'study':
+              study1 = parse_first_study(root)
+              submission['study1'] = study1
+              if 'title' in study1:
+                submission['study1_title'] = study1['title']
+            elif filetype == 'submission':
+              pass
+            elif filetype == 'analysis':
+              pass
+            else:
+              print('Unknown type: %s' % filetype)
+          except etree.XMLSyntaxError as xse:
+            print(repr(xse))
