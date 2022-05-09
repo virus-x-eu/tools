@@ -21,12 +21,12 @@ parser.add_argument("--mapping", dest='output_mapping', required=True, help='map
 args = parser.parse_args()
 
 def hash(data):
-  h = hashlib.sha256(data).hexdigest()
+  h = hashlib.sha256(data.encode('utf-8')).hexdigest()
   i = int(h[0:16], 16)
   return base32_crockford.encode(i).strip()
 
 
-with open(args.input_fasta, 'rU') as sourceFile:
+with open(args.input_fasta, 'r') as sourceFile:
   with open(args.output_fasta, 'w') as destFile:
     with open(args.output_mapping, 'w') as mapping:
       dest = FastaIO.FastaWriter(destFile, wrap=None)
