@@ -1,4 +1,4 @@
-FROM virusx/pfamscan:1.6
+FROM quay.io/emgb/pfamscan:1.6
 COPY pfamscan-parallel.sh /usr/local/bin/
 RUN apt-get update && \
     apt-get install -y parallel && \

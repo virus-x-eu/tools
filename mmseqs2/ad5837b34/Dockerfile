@@ -1,0 +1,2 @@
+FROM soedinglab/mmseqs2@sha256:93a0c2e2ba5e57a0d962b87fff114dda9c1ee7013945a6f3ff28a4f6872215d8
+# Git commit ad5837b3444728411e6c90f8c6ba9370f665c443

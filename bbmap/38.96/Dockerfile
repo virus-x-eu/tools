@@ -1,0 +1,1 @@
+FROM quay.io/biocontainers/bbmap:38.96--h5c4e2a8_1
